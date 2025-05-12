@@ -1,0 +1,24 @@
+label: gpt
+label-id: 7BC48295-5587-4048-8999-312FE2E78B20
+device: /dev/nvme0n1
+unit: sectors
+first-lba: 40
+last-lba: 250069646
+sector-size: 512
+
+/dev/nvme0n1p1 : start=     3050048, size=      819200, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=A633A225-B5F7-45D1-B284-7B5E4D4D6782, name="APP"
+/dev/nvme0n1p2 : start=     3869248, size=   114524160, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=9DE8EB2B-77D0-4F98-9F40-7A9138F848F7, name="APP_ENC"
+/dev/nvme0n1p3 : start=          40, size=      262144, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=33D44CFB-9250-4044-AA70-E604DE826402, name="A_kernel"
+/dev/nvme0n1p4 : start=      262184, size=        1536, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=0ED4C6DD-E768-47D5-B6E9-96088B018508, name="A_kernel-dtb"
+/dev/nvme0n1p5 : start=      263720, size=       64768, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=578746EE-EF81-41FF-B582-4B3B1CA5CC0A, name="A_reserved_on_user"
+/dev/nvme0n1p6 : start=      328488, size=      262144, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=213F2CFA-937E-49D8-BD41-5E0759595C17, name="B_kernel"
+/dev/nvme0n1p7 : start=      590632, size=        1536, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=1AFF2F81-1131-4F8F-80C3-D77BD5DFD24B, name="B_kernel-dtb"
+/dev/nvme0n1p8 : start=      592168, size=       64768, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=64D3E839-4CB3-4135-A02D-DA5A60720904, name="B_reserved_on_user"
+/dev/nvme0n1p9 : start=      656936, size=      163840, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=47112CDC-E725-4BB4-BFAF-A7512AB89353, name="recovery"
+/dev/nvme0n1p10 : start=      820776, size=        1024, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=6C98C574-AFB4-459E-B3D8-9F206F126D20, name="recovery-dtb"
+/dev/nvme0n1p11 : start=      821800, size=      131072, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, uuid=05E34204-48DE-4586-8D95-D122E208B814, name="esp"
+/dev/nvme0n1p12 : start=      952872, size=      163840, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=2D5C3046-7F44-4B68-AD0A-3D1D3477E304, name="recovery_alt"
+/dev/nvme0n1p13 : start=     1116712, size=        1024, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=3D686EC5-8CE2-4888-901C-B00FBF9BA75E, name="recovery-dtb_alt"
+/dev/nvme0n1p14 : start=     1117736, size=      131072, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=62612060-5DCD-470E-98F5-0376E14F607D, name="esp_alt"
+/dev/nvme0n1p15 : start=     1248832, size=      819200, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=069D6EFE-B819-41DB-B72F-33493757716B, name="UDA"
+/dev/nvme0n1p16 : start=     2068032, size=      982016, type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, uuid=631104CC-5D57-440D-98C9-7A6FA931222A, name="reserved"

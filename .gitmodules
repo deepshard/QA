@@ -1,0 +1,3 @@
+[submodule "THERMALTEST/gpu-burn"]
+	path = THERMALTEST/gpu-burn
+	url = https://github.com/wilicc/gpu-burn
