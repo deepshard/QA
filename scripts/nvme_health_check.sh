@@ -11,7 +11,7 @@ TEST_MB=128                # size of each chunk we write/read (128 MiB)
 CHUNKS=8                   # how many chunks to test (= 1 GiB total)
 
 sudo mkdir -p "$LOGDIR" "$TMPDIR"
-
+sudo sudo smartctl -a -x /dev/nvme0n1
 info () { echo -e "\e[1;34m$*\e[0m"; }
 
 ############ 1. Baseline SMART ############################################
