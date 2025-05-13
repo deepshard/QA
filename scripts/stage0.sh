@@ -202,15 +202,21 @@ if [ ! -d "$QA_DIR/.git" ]; then
   su - truffle -c 'eval "$(ssh-agent -s)" && ssh-add ~/.ssh/id_ed25519 2>/dev/null'
 
   log "Cloning QA repository..."
+  # Remove existing qa directory if it exists
+  rm -rf "$QA_DIR"
+  
   # Ensure the parent directory exists and has correct permissions
   mkdir -p /home/truffle
   chown truffle:truffle /home/truffle
   
-  # Clone the repository as the truffle user, suppressing any remaining prompts
-  su - truffle -c "GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no' git clone git@github.com:deepshard/QA.git $QA_DIR"
+  # Clone the repository as the truffle user with verbose output
+  log "Attempting to clone with verbose output..."
+  su - truffle -c "GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -v' git clone -v git@github.com:deepshard/QA.git $QA_DIR 2>&1" | tee -a "$LOG_FILE"
   
-  # Verify repository clone
-  if [ -d "$QA_DIR/.git" ]; then
+  # Check the clone result and directory ownership
+  if [ $? -eq 0 ] && [ -d "$QA_DIR/.git" ]; then
+    # Ensure proper ownership
+    chown -R truffle:truffle "$QA_DIR"
     verify "QA repository cloned successfully"
     # Verify remote URL
     REMOTE_URL=$(su - truffle -c "cd $QA_DIR && git remote get-url origin")
@@ -220,19 +226,15 @@ if [ ! -d "$QA_DIR/.git" ]; then
       log "❌ Repository remote URL verification failed"
     fi
   else
-    log "❌ Repository clone verification failed"
+    log "❌ Repository clone failed. Please check the logs above for SSH debugging information"
   fi
 else
   log "QA repository already exists"
 fi
 ########################################
-# PHASE 6: Power Mode and SPI Setup
+# PHASE 6: SPI Setup
 ########################################
-log "Starting power mode and SPI setup phase"
-
-# Check current power mode and log it
-CURRENT_MODE=$(nvpmodel -q | grep -v "NV Power Mode" | xargs)
-log "Initial power mode: $CURRENT_MODE"
+log "Starting SPI setup phase"
 
 # Check if SPI is enabled and log it
 if grep -q "^dtparam=spi=on" /boot/config.txt; then
@@ -253,20 +255,6 @@ if ! grep -q "^dtparam=spi=on" /boot/config.txt; then
   log "SPI enabled. Reboot will be required."
 else
   log "SPI already enabled."
-fi
-
-# Check current power mode
-if [ "$CURRENT_MODE" != "0" ]; then
-  log "Current power mode is not MAXN. Setting to MAXN..."
-  log "Command: nvpmodel -m 0"
-  
-  # Send "yes" to the reboot prompt
-  echo "yes" | nvpmodel -m 0
-  
-  REBOOT_NEEDED=true
-  log "Power mode set to MAXN. Reboot will be required."
-else
-  log "Power mode is already MAXN."
 fi
 
 ########################################
@@ -380,6 +368,29 @@ if python3 -c "import jtop" &> /dev/null; then
   verify "jtop package installation successful"
 else
   log "❌ Failed to install jtop package"
+fi
+
+########################################
+# PHASE 9: Power Mode Setup
+########################################
+log "Starting power mode setup phase"
+
+# Check current power mode and log it
+CURRENT_MODE=$(nvpmodel -q | grep -v "NV Power Mode" | xargs)
+log "Initial power mode: $CURRENT_MODE"
+
+# Check current power mode
+if [ "$CURRENT_MODE" != "0" ]; then
+  log "Current power mode is not MAXN. Setting to MAXN..."
+  log "Command: nvpmodel -m 0"
+  
+  # Send "yes" to the reboot prompt
+  echo "yes" | nvpmodel -m 0
+  
+  REBOOT_NEEDED=true
+  log "Power mode set to MAXN. Reboot will be required."
+else
+  log "Power mode is already MAXN."
 fi
 
 ########################################
