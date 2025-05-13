@@ -1,4 +1,6 @@
 #!/bin/bash
+# Create logs directory in /home/truffle/qa/scripts/logs
+mkdir -p "/home/truffle/qa/scripts/logs"
 mkdir -p "$(pwd)/logs"
 # Log file setup
 LOG_FILE="$(pwd)/logs/stage0_log.txt"
@@ -173,7 +175,7 @@ if [ ! -d "$QA_DIR/.git" ]; then
 
   #
   # 2.  Make sure GitHub's host key is already trusted
-  #     – avoids the first-time interactive “yes/no” question.
+  #     – avoids the first-time interactive "yes/no" question.
   #
   su - truffle -c '
     if ! ssh-keygen -F github.com > /dev/null 2>&1; then
@@ -335,6 +337,49 @@ else
   log "sshpass not available. You may be prompted for password."
   SSH_COPY_CMD="cat ${SSH_KEY_FILE}.pub | ssh ${REMOTE_USER}@${REMOTE_HOST} 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'"
   eval $SSH_COPY_CMD
+fi
+
+########################################
+# PHASE 8: Additional Tools Installation
+########################################
+log "Starting additional tools installation phase"
+
+# Install smartmontools for smartctl
+if ! command -v smartctl &> /dev/null; then
+  log "Installing smartmontools..."
+  apt-get update && apt-get install -y smartmontools
+  if command -v smartctl &> /dev/null; then
+    verify "smartmontools installation successful"
+  else
+    log "❌ Failed to install smartmontools"
+  fi
+else
+  log "smartmontools is already installed"
+fi
+
+# Create directory for NVME health logs
+NVME_LOG_DIR="/var/log/nvme_health"
+if [ ! -d "$NVME_LOG_DIR" ]; then
+  log "Creating NVME health log directory..."
+  mkdir -p "$NVME_LOG_DIR"
+  chmod 755 "$NVME_LOG_DIR"
+  verify "NVME health log directory created"
+fi
+
+# Install pip if not already installed
+if ! command -v pip3 &> /dev/null; then
+  log "Installing pip3..."
+  apt-get update && apt-get install -y python3-pip
+  verify "pip3 installation"
+fi
+
+# Install jtop Python package
+log "Installing jtop Python package..."
+pip3 install -U jetson-stats
+if python3 -c "import jtop" &> /dev/null; then
+  verify "jtop package installation successful"
+else
+  log "❌ Failed to install jtop package"
 fi
 
 ########################################

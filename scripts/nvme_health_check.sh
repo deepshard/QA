@@ -1,72 +1,178 @@
 #!/usr/bin/env bash
-# nvme_health_check.sh — light‑weight NVMe health & free‑space verifier
-# Designed for Jetson AGX Orin with rootfs on /dev/nvme0n1
+# nvme_health_check.sh — Comprehensive NVMe health & performance verifier
 set -euo pipefail
 
-DEV_CHAR=/dev/nvme0        # controller char dev
-DEV_BLOCK=/dev/nvme0n1     # namespace block dev (your root)
+# ---------- Configuration ----------
+DEV_BLOCK=$(nvme list | awk '$1 ~ /nvme.*n1/ {print $1;exit}')
+DEV_CHAR=${DEV_BLOCK%n1}
 LOGDIR=/var/log/nvme_health
-TMPDIR=/tmp/nvme_free_space_test
-TEST_MB=128                # size of each chunk we write/read (128 MiB)
-CHUNKS=8                   # how many chunks to test (= 1 GiB total)
+TMPDIR=$(mktemp -d /tmp/nvme_health.XXXX)
+TEST_TYPE="short"    # Use -e or --extended for extended test
+TEST_MB=256         # Increased per-chunk size
+CHUNKS=16           # Increased number of chunks
+LOGFILE="$LOGDIR/$(date +%F_%T).log"
+WARN_TEMP=70        # Warning temperature threshold (Celsius)
+WARN_USED=80        # Warning percentage used threshold
+MIN_SPEED=500       # Minimum MB/s write speed expected
 
-sudo mkdir -p "$LOGDIR" "$TMPDIR"
-sudo sudo smartctl -a -x /dev/nvme0n1
-info () { echo -e "\e[1;34m$*\e[0m"; }
-
-############ 1. Baseline SMART ############################################
-info "Collecting baseline SMART / error log ⏳"
-(   echo "===== SMART baseline ====="
-    date
-    nvme smart-log "$DEV_CHAR"
-    echo
-    smartctl -x "$DEV_BLOCK"
-) | sudo tee "$LOGDIR/pre_smart.txt" > /dev/null
-
-############ 2. Short controller self‑test ################################
-info "Startingextended NVMe self‑test (takes ~30 mins)…"
-sudo nvme device-self-test "$DEV_CHAR" -s 1   # 2 = extended test
-
-# Poll status every 10 s until done (Current operation == 0)
-while :; do
-    op=$(nvme self-test-log "$DEV_CHAR" | awk '/Current operation/{print $NF}')
-    [[ "$op" == "0" ]] && break
-    sleep 30
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -e|--extended) TEST_TYPE="extended"; shift ;;
+        *) echo "Unknown option: $1"; exit 1 ;;
+    esac
 done
-info "Self‑test finished."
 
-sudo nvme self-test-log "$DEV_CHAR" | sudo tee "$LOGDIR/selftest_log.txt"
+# ---------- Functions ----------
+log() {
+    local msg="[$(date '+%F %T')] $*"
+    echo "$msg" | tee -a "$LOGFILE"
+}
 
-############ 3. Free‑space write / verify loop ############################
-info "Exercising free space with ${CHUNKS}×${TEST_MB} MiB random blocks…"
-cd "$TMPDIR"
+warn() {
+    log "⚠️  WARNING: $*"
+}
+
+fail() {
+    log "❌ FAILED: $*"
+    exit 1
+}
+
+# Cleanup on exit
+cleanup() {
+    local exit_code=$?
+    rm -rf "$TMPDIR"
+    if [ $exit_code -eq 0 ]; then
+        log "✅ NVMe health check completed successfully"
+    else
+        log "❌ NVMe health check failed with code $exit_code"
+    fi
+    exit $exit_code
+}
+trap cleanup EXIT
+
+# ---------- Preflight Checks ----------
+if [[ $EUID -ne 0 ]]; then
+    echo "Please run as root" >&2
+    exit 1
+fi
+
+# Check required tools
+for cmd in nvme smartctl dd sha256sum fstrim; do
+    command -v "$cmd" &>/dev/null || fail "Required tool missing: $cmd"
+done
+
+mkdir -p "$LOGDIR"
+
+# ---------- SMART Data Collection ----------
+log "Collecting initial SMART data..."
+smart_data=$(nvme smart-log "$DEV_CHAR")
+echo "$smart_data" >> "$LOGFILE"
+
+# Extract and check critical values
+temperature=$(echo "$smart_data" | awk '/Temperature:/ {print $3+0}')
+used_percent=$(echo "$smart_data" | awk '/Percentage Used:/ {print $3+0}')
+media_errors=$(echo "$smart_data" | awk '/Media and Data Integrity Errors:/ {print $6+0}')
+power_cycles=$(echo "$smart_data" | awk '/Power Cycles:/ {print $3+0}')
+unsafe_shutdowns=$(echo "$smart_data" | awk '/Unsafe Shutdowns:/ {print $3+0}')
+
+# Check thresholds (only if values are non-empty)
+if [ -n "$temperature" ] && [ "$temperature" -gt "$WARN_TEMP" ]; then
+    warn "Temperature ${temperature}°C exceeds warning threshold"
+fi
+
+if [ -n "$used_percent" ] && [ "$used_percent" -gt "$WARN_USED" ]; then
+    warn "Drive usage ${used_percent}% exceeds warning threshold"
+fi
+
+if [ -n "$media_errors" ] && [ "$media_errors" -gt 0 ]; then
+    fail "Drive has $media_errors media errors"
+fi
+
+# Log all values, with N/A for empty ones
+log "Drive Status:"
+log "  - Temperature: ${temperature:-N/A}°C"
+log "  - Used: ${used_percent:-N/A}%"
+log "  - Power Cycles: ${power_cycles:-N/A}"
+log "  - Unsafe Shutdowns: ${unsafe_shutdowns:-N/A}"
+
+# ---------- Self Test ----------
+if [ "$TEST_TYPE" = "extended" ]; then
+    log "Starting extended NVMe self-test (may take 30+ minutes)..."
+    test_code=2
+else
+    log "Starting short NVMe self-test (~2 minutes)..."
+    test_code=1
+fi
+
+nvme device-self-test "$DEV_CHAR" -s "$test_code"
+
+# Monitor progress
+log "Monitoring self-test progress..."
+while true; do
+    sleep 5
+    status=$(nvme self-test-log "$DEV_CHAR")
+    op=$(echo "$status" | awk '/Current operation/ {print $NF}')
+    progress=$(echo "$status" | awk '/Current Completion/ {print $NF}')
+    
+    if [ "$op" = "0" ]; then
+        break
+    fi
+    log "  Progress: $progress%"
+done
+
+# Check self-test results
+result=$(nvme self-test-log "$DEV_CHAR" | awk '/Operation Result/ {print $NF; exit}')
+if [ "$result" != "0" ]; then
+    fail "Self-test failed with result code $result"
+fi
+log "Self-test completed successfully"
+
+# ---------- Performance Test ----------
+log "Testing drive performance with $((CHUNKS*TEST_MB)) MiB random data..."
+total_time_start=$(date +%s.%N)
+total_bytes=0
 
 for i in $(seq 1 "$CHUNKS"); do
-    blk="blk${i}.bin"
-    sha="blk${i}.sha256"
-
-    dd if=/dev/urandom of="$blk" bs=1M count="$TEST_MB" oflag=direct status=none
-    sha256sum "$blk" | tee "$sha" >/dev/null
-
-    # flush to disk, then read back and verify
-    sync
-    sha256sum -c "$sha" || { echo "❌ checksum mismatch in $blk"; exit 1; }
-    rm -f "$blk" "$sha"
-    printf "  ✓ chunk %d verified\n" "$i"
+    blk="$TMPDIR/blk$i"
+    
+    # Write test
+    write_start=$(date +%s.%N)
+    dd if=/dev/urandom of="$blk" bs=1M count="$TEST_MB" status=none
+    write_end=$(date +%s.%N)
+    write_time=$(echo "$write_end - $write_start" | bc)
+    write_speed=$(echo "scale=2; $TEST_MB / $write_time" | bc)
+    
+    # Verify data
+    sha256sum "$blk" | sha256sum -c - || fail "Data verification failed for chunk $i"
+    
+    total_bytes=$((total_bytes + TEST_MB*1024*1024))
+    log "  ✓ Chunk $i verified (Write speed: ${write_speed} MB/s)"
+    
+    # Check if write speed is below threshold
+    if (( $(echo "$write_speed < $MIN_SPEED" | bc -l) )); then
+        warn "Write speed ${write_speed} MB/s below minimum threshold"
+    fi
+    
+    rm -f "$blk"
 done
 
-sync
-info "TRIMming freed blocks…"
-sudo fstrim -v /
+# Calculate overall performance
+total_time=$(echo "$(date +%s.%N) - $total_time_start" | bc)
+avg_speed=$(echo "scale=2; ($total_bytes/1024/1024) / $total_time" | bc)
+log "Average write speed: ${avg_speed} MB/s"
 
-############ 4. Post‑test SMART ###########################################
-info "Collecting SMART after tests…"
-(   echo "===== SMART after ====="
-    date
-    nvme smart-log "$DEV_CHAR"
-    echo
-    smartctl -x "$DEV_BLOCK"
-) | sudo tee "$LOGDIR/post_smart.txt" > /dev/null
+# ---------- TRIM Test ----------
+if grep -q "0" "/sys/block/$(basename "$DEV_BLOCK")/queue/discard_granularity"; then
+    log "TRIM not supported - skipping"
+else
+    log "Testing TRIM support..."
+    fstrim -v / || warn "TRIM operation failed (non-fatal)"
+fi
 
-info "✅ NVMe health check complete. Logs in $LOGDIR"
+# ---------- Final SMART Check ----------
+log "Collecting final SMART data..."
+nvme smart-log "$DEV_CHAR" | tee -a "$LOGFILE"
+
+# Success is implicit - cleanup trap will log success message
 

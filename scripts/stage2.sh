@@ -4,6 +4,9 @@
 
 set -euo pipefail
 
+# Create logs directory in /home/truffle/qa/scripts/logs
+mkdir -p "/home/truffle/qa/scripts/logs"
+
 # CONFIGURATION
 LED_WHITE="/home/truffle/qa/led_test/led_white"
 LED_RED="/home/truffle/qa/led_test/led_red"
