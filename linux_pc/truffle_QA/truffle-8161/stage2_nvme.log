@@ -1,0 +1,90 @@
+[2025-05-13 03:21:52] Collecting initial SMART data...
+[2025-05-13 03:21:52] Drive Status:
+[2025-05-13 03:21:52]   - Temperature: N/A°C
+[2025-05-13 03:21:52]   - Used: N/A%
+[2025-05-13 03:21:52]   - Power Cycles: N/A
+[2025-05-13 03:21:52]   - Unsafe Shutdowns: N/A
+[2025-05-13 03:21:52] Starting short NVMe self-test (~2 minutes)...
+Short Device self-test started
+[2025-05-13 03:21:52] Monitoring self-test progress...
+[2025-05-13 03:21:57] Self-test completed successfully
+[2025-05-13 03:21:57] Testing drive performance with 4096 MiB random data...
+/tmp/nvme_health.1csv/blk1: OK
+[2025-05-13 03:22:00]   ✓ Chunk 1 verified (Write speed: 262.76 MB/s)
+[2025-05-13 03:22:00] ⚠️  WARNING: Write speed 262.76 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk2: OK
+[2025-05-13 03:22:04]   ✓ Chunk 2 verified (Write speed: 261.46 MB/s)
+[2025-05-13 03:22:04] ⚠️  WARNING: Write speed 261.46 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk3: OK
+[2025-05-13 03:22:07]   ✓ Chunk 3 verified (Write speed: 262.29 MB/s)
+[2025-05-13 03:22:07] ⚠️  WARNING: Write speed 262.29 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk4: OK
+[2025-05-13 03:22:10]   ✓ Chunk 4 verified (Write speed: 262.06 MB/s)
+[2025-05-13 03:22:10] ⚠️  WARNING: Write speed 262.06 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk5: OK
+[2025-05-13 03:22:14]   ✓ Chunk 5 verified (Write speed: 261.80 MB/s)
+[2025-05-13 03:22:14] ⚠️  WARNING: Write speed 261.80 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk6: OK
+[2025-05-13 03:22:17]   ✓ Chunk 6 verified (Write speed: 261.99 MB/s)
+[2025-05-13 03:22:17] ⚠️  WARNING: Write speed 261.99 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk7: OK
+[2025-05-13 03:22:21]   ✓ Chunk 7 verified (Write speed: 261.81 MB/s)
+[2025-05-13 03:22:21] ⚠️  WARNING: Write speed 261.81 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk8: OK
+[2025-05-13 03:22:24]   ✓ Chunk 8 verified (Write speed: 260.57 MB/s)
+[2025-05-13 03:22:24] ⚠️  WARNING: Write speed 260.57 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk9: OK
+[2025-05-13 03:22:28]   ✓ Chunk 9 verified (Write speed: 261.56 MB/s)
+[2025-05-13 03:22:28] ⚠️  WARNING: Write speed 261.56 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk10: OK
+[2025-05-13 03:22:31]   ✓ Chunk 10 verified (Write speed: 261.96 MB/s)
+[2025-05-13 03:22:31] ⚠️  WARNING: Write speed 261.96 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk11: OK
+[2025-05-13 03:22:34]   ✓ Chunk 11 verified (Write speed: 261.72 MB/s)
+[2025-05-13 03:22:34] ⚠️  WARNING: Write speed 261.72 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk12: OK
+[2025-05-13 03:22:38]   ✓ Chunk 12 verified (Write speed: 261.39 MB/s)
+[2025-05-13 03:22:38] ⚠️  WARNING: Write speed 261.39 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk13: OK
+[2025-05-13 03:22:41]   ✓ Chunk 13 verified (Write speed: 262.02 MB/s)
+[2025-05-13 03:22:41] ⚠️  WARNING: Write speed 262.02 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk14: OK
+[2025-05-13 03:22:45]   ✓ Chunk 14 verified (Write speed: 261.11 MB/s)
+[2025-05-13 03:22:45] ⚠️  WARNING: Write speed 261.11 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk15: OK
+[2025-05-13 03:22:48]   ✓ Chunk 15 verified (Write speed: 259.98 MB/s)
+[2025-05-13 03:22:48] ⚠️  WARNING: Write speed 259.98 MB/s below minimum threshold
+/tmp/nvme_health.1csv/blk16: OK
+[2025-05-13 03:22:52]   ✓ Chunk 16 verified (Write speed: 261.66 MB/s)
+[2025-05-13 03:22:52] ⚠️  WARNING: Write speed 261.66 MB/s below minimum threshold
+[2025-05-13 03:22:52] Average write speed: 74.72 MB/s
+[2025-05-13 03:22:52] Testing TRIM support...
+/: 98 GiB (105269182464 bytes) trimmed
+[2025-05-13 03:22:53] Collecting final SMART data...
+Smart Log for NVME device:nvme0 namespace-id:ffffffff
+critical_warning			: 0
+temperature				: 48 C (321 Kelvin)
+available_spare				: 100%
+available_spare_threshold		: 10%
+percentage_used				: 0%
+endurance group critical warning summary: 0
+data_units_read				: 44,177
+data_units_written			: 132,544
+host_read_commands			: 963,692
+host_write_commands			: 943,887
+controller_busy_time			: 1
+power_cycles				: 40
+power_on_hours				: 386
+unsafe_shutdowns			: 39
+media_errors				: 0
+num_err_log_entries			: 0
+Warning Temperature Time		: 6
+Critical Composite Temperature Time	: 0
+Temperature Sensor 1           : 48 C (321 Kelvin)
+Temperature Sensor 2           : 54 C (327 Kelvin)
+Thermal Management T1 Trans Count	: 2
+Thermal Management T2 Trans Count	: 1
+Thermal Management T1 Total Time	: 3
+Thermal Management T2 Total Time	: 0
+[2025-05-13 03:22:53] ✅ NVMe health check completed successfully
+[0;32m[1m✓ NVME health check completed successfully[0m

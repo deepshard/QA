@@ -1,0 +1,13 @@
+et up for linux pc setup for robust ssh connection
+
+sudo nano /etc/ssh/sshd_config
+
+PermitRootLogin yes  # or no, depending on your preference
+PasswordAuthentication yes
+UsePAM yes
+ClientAliveInterval 60
+ClientAliveCountMax 3
+TCPKeepAlive yes
+after making changes
+sudo systemctl restart sshd
+sudo systemctl restart avahi-daemon

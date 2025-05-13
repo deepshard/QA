@@ -1,0 +1,38 @@
+[2025-05-13 04:27:07] Stage 1 script started
+[2025-05-13 04:27:07] ===========================================
+[2025-05-13 04:27:07] STARTING PHASE: Stage 0 Verification
+[2025-05-13 04:27:07] ===========================================
+[2025-05-13 04:27:07] ✅ SUCCESS: Power mode is confirmed to be MAXN (Mode 0)
+[2025-05-13 04:27:07] ✅ SUCCESS: SPI is confirmed to be enabled
+[2025-05-13 04:27:07] ----------------------------------------
+[2025-05-13 04:27:07] COMPLETED PHASE: Stage 0 Verification
+[2025-05-13 04:27:07] ----------------------------------------
+[2025-05-13 04:27:07] ===========================================
+[2025-05-13 04:27:07] STARTING PHASE: LED Test
+[2025-05-13 04:27:07] ===========================================
+[2025-05-13 04:27:07] Testing all LED states
+[2025-05-13 04:27:07] Testing WHITE LED
+[2025-05-13 04:27:07] Starting LED White Program
+[2025-05-13 04:27:10] Stopping LED process (PID: 3880)
+[2025-05-13 04:27:10] Running LED OFF command
+[2025-05-13 04:27:11] Testing RED LED
+[2025-05-13 04:27:11] Starting LED Red Program
+[2025-05-13 04:27:14] Stopping LED process (PID: 3930)
+[2025-05-13 04:27:14] Running LED OFF command
+[2025-05-13 04:27:15] Testing GREEN LED
+[2025-05-13 04:27:15] Starting LED Green Program
+[2025-05-13 04:27:18] Stopping LED process (PID: 3975)
+[2025-05-13 04:27:18] Running LED OFF command
+[2025-05-13 04:27:19] Testing BLUE LED
+[2025-05-13 04:27:19] Starting LED Blue Program
+[2025-05-13 04:27:22] Stopping LED process (PID: 4025)
+[2025-05-13 04:27:22] Running LED OFF command
+[2025-05-13 04:27:23] ✅ SUCCESS: LED test completed
+[2025-05-13 04:27:23] ----------------------------------------
+[2025-05-13 04:27:23] COMPLETED PHASE: LED Test
+[2025-05-13 04:27:23] ----------------------------------------
+[2025-05-13 04:27:23] Completing stage1 log for transfer
+[2025-05-13 04:27:23] ----------------------------------------
+[2025-05-13 04:27:23] COMPLETED PHASE: Log Transfer
+[2025-05-13 04:27:23] ----------------------------------------
+[2025-05-13 04:27:23] Stage 1 check completed successfully

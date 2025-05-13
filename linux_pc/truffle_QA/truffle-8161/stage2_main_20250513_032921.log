@@ -1,0 +1,86 @@
+[0;36m[2025-05-13 03:20:22][0m Getting device serial number
+[0;36m[2025-05-13 03:20:22][0m Device serial ends with: 8161
+[0;36m[2025-05-13 03:20:22][0m Setting up remote directory and transferring existing logs
+[0;32m[1m✓ Remote directory created using SSH key[0m
+[0;36m[2025-05-13 03:20:23][0m No existing log files to transfer
+
+[0;36m[1m=== PHASE: LED Test ===[0m
+[0;36m[2025-05-13 03:20:23][0m Testing all LED states
+[0;36m[2025-05-13 03:20:23][0m Leds are showing all orb states
+[0;36m[2025-05-13 03:20:33][0m Stopping LED process (PID: 12287)
+[0;36m[2025-05-13 03:20:33][0m Running LED OFF command
+[0;32m[1m✓ LED test completed[0m
+[0;36m[1m=== DONE: LED Test ===[0m
+
+
+[0;36m[1m=== PHASE: WiFi Hotspot Test ===[0m
+[0;36m[2025-05-13 03:20:34][0m Starting LED White Program
+[0;36m[2025-05-13 03:20:39][0m Stopping LED process (PID: 12411)
+[0;36m[2025-05-13 03:20:39][0m Running LED OFF command
+[0;36m[2025-05-13 03:20:42][0m Starting WiFi hotspot test
+[0;36m[2025-05-13 03:20:42][0m Running hotspot test, logging to /home/truffle/qa/scripts/logs/stage2_hotspot_logs.txt
+[0;32m[1m✓ Hotspot test completed successfully[0m
+[0;36m[2025-05-13 03:21:33][0m Starting LED Green Program
+[0;36m[2025-05-13 03:21:38][0m Stopping LED process (PID: 13109)
+[0;36m[2025-05-13 03:21:38][0m Running LED OFF command
+[0;36m[2025-05-13 03:21:42][0m Transferring hotspot log to remote
+[0;36m[2025-05-13 03:21:42][0m Transferring /home/truffle/qa/scripts/logs/stage2_hotspot_logs.txt to truffle@truffle.local:/home/truffle/abd_work/truffle_QA/truffle-8161/stage2_hotspot_logs.txt
+[0;32m[1m✓ File transferred successfully using SSH key[0m
+[0;36m[1m=== DONE: WiFi Hotspot Test ===[0m
+
+
+[0;36m[1m=== PHASE: NVME Health Check ===[0m
+[0;36m[2025-05-13 03:21:44][0m Starting LED White Program
+[0;36m[2025-05-13 03:21:49][0m Stopping LED process (PID: 13286)
+[0;36m[2025-05-13 03:21:49][0m Running LED OFF command
+[0;36m[2025-05-13 03:21:52][0m Starting NVME health check
+[0;36m[2025-05-13 03:21:52][0m Running NVME health check, logging to /home/truffle/qa/scripts/logs/stage2_nvme.log
+[0;32m[1m✓ NVME health check completed successfully[0m
+[0;36m[2025-05-13 03:22:53][0m Starting LED Green Program
+[0;36m[2025-05-13 03:22:58][0m Stopping LED process (PID: 14346)
+[0;36m[2025-05-13 03:22:58][0m Running LED OFF command
+[0;36m[2025-05-13 03:23:02][0m Transferring NVME log to remote
+[0;36m[2025-05-13 03:23:02][0m Transferring /home/truffle/qa/scripts/logs/stage2_nvme.log to truffle@truffle.local:/home/truffle/abd_work/truffle_QA/truffle-8161/stage2_nvme.log
+[0;32m[1m✓ File transferred successfully using SSH key[0m
+[0;36m[1m=== DONE: NVME Health Check ===[0m
+
+
+[0;36m[1m=== PHASE: GPU/CPU burn ===[0m
+[0;36m[2025-05-13 03:23:03][0m Starting LED White Program
+[0;36m[2025-05-13 03:23:08][0m Stopping LED process (PID: 14436)
+[0;36m[2025-05-13 03:23:08][0m Running LED OFF command
+[0;36m[2025-05-13 03:23:11][0m Starting GPU/CPU burn test
+[0;36m[2025-05-13 03:23:11][0m Running GPU/CPU burn test, logging to /home/truffle/qa/scripts/logs/stage2_burn.log
+[0;36m[2025-05-13 03:24:11][0m Transferring /home/truffle/qa/scripts/logs/stage2_burn_log.csv to truffle@truffle.local:/home/truffle/abd_work/truffle_QA/truffle-8161/stage2_burn_log.csv
+[0;32m[1m✓ File transferred successfully using SSH key[0m
+[0;36m[2025-05-13 03:24:13][0m Transferred GPU CSV at Tue May 13 03:24:13 AM EDT 2025
+[0;36m[2025-05-13 03:25:13][0m Transferring /home/truffle/qa/scripts/logs/stage2_burn_log.csv to truffle@truffle.local:/home/truffle/abd_work/truffle_QA/truffle-8161/stage2_burn_log.csv
+[0;32m[1m✓ File transferred successfully using SSH key[0m
+[0;36m[2025-05-13 03:25:13][0m Transferred GPU CSV at Tue May 13 03:25:13 AM EDT 2025
+[0;36m[2025-05-13 03:26:13][0m Transferring /home/truffle/qa/scripts/logs/stage2_burn_log.csv to truffle@truffle.local:/home/truffle/abd_work/truffle_QA/truffle-8161/stage2_burn_log.csv
+[0;32m[1m✓ File transferred successfully using SSH key[0m
+[0;36m[2025-05-13 03:26:15][0m Transferred GPU CSV at Tue May 13 03:26:15 AM EDT 2025
+[0;36m[2025-05-13 03:27:15][0m Transferring /home/truffle/qa/scripts/logs/stage2_burn_log.csv to truffle@truffle.local:/home/truffle/abd_work/truffle_QA/truffle-8161/stage2_burn_log.csv
+[0;32m[1m✓ File transferred successfully using SSH key[0m
+[0;36m[2025-05-13 03:27:16][0m Transferred GPU CSV at Tue May 13 03:27:16 AM EDT 2025
+[0;36m[2025-05-13 03:28:16][0m Transferring /home/truffle/qa/scripts/logs/stage2_burn_log.csv to truffle@truffle.local:/home/truffle/abd_work/truffle_QA/truffle-8161/stage2_burn_log.csv
+[0;32m[1m✓ File transferred successfully using SSH key[0m
+[0;36m[2025-05-13 03:28:17][0m Transferred GPU CSV at Tue May 13 03:28:17 AM EDT 2025
+[0;31m[1m✗ GPU/CPU burn test failed with exit code 1[0m
+[0;36m[2025-05-13 03:29:12][0m Starting LED Red Program
+[0;36m[2025-05-13 03:29:17][0m Stopping LED process (PID: 21212)
+[0;36m[2025-05-13 03:29:17][0m Running LED OFF command
+[0;36m[2025-05-13 03:29:17][0m Transferring /home/truffle/qa/scripts/logs/stage2_burn_log.csv to truffle@truffle.local:/home/truffle/abd_work/truffle_QA/truffle-8161/stage2_burn_log.csv
+[0;32m[1m✓ File transferred successfully using SSH key[0m
+[0;36m[2025-05-13 03:29:18][0m Transferred GPU CSV at Tue May 13 03:29:18 AM EDT 2025
+[0;36m[2025-05-13 03:29:21][0m Transferring final GPU log and data to remote
+[0;36m[2025-05-13 03:29:21][0m Transferring /home/truffle/qa/scripts/logs/stage2_burn.log to truffle@truffle.local:/home/truffle/abd_work/truffle_QA/truffle-8161/stage2_burn.log
+[0;32m[1m✓ File transferred successfully using SSH key[0m
+[0;36m[2025-05-13 03:29:21][0m Transferring /home/truffle/qa/scripts/logs/stage2_burn_log.csv to truffle@truffle.local:/home/truffle/abd_work/truffle_QA/truffle-8161/stage2_burn_log.csv.final
+[0;32m[1m✓ File transferred successfully using SSH key[0m
+[0;36m[1m=== DONE: GPU/CPU burn ===[0m
+
+[0;36m[2025-05-13 03:29:21][0m All tests completed
+[0;32m[1m✓ Health check complete![0m
+[0;36m[2025-05-13 03:29:21][0m Log saved to /root/truffle-8161_log/healthcheck_20250513_032022.log
+[0;36m[2025-05-13 03:29:21][0m Transferring /root/healthcheck_20250513_032022.log to truffle@truffle.local:/home/truffle/abd_work/truffle_QA/truffle-8161/stage2_main_20250513_032921.log

@@ -1,0 +1,11 @@
+Stage 0 started
+Initial power mode: 0
+Initial SPI status: Enabled
+SPI already enabled.
+Power mode is already MAXN.
+Starting SSH key setup phase
+SSH key already exists. Skipping generation
+Copying public key to truffle@truffle.local
+SSH connection successful with password
+Public key copied to remote host successfully
+No changes needed. Both SPI and MAXN are already enabled.

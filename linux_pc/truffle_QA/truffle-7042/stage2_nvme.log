@@ -1,0 +1,148 @@
+smartctl 7.2 2020-12-30 r5155 [aarch64-linux-5.15.148-tegra] (local build)
+Copyright (C) 2002-20, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Model Number:                       Patriot M.2 P300 128GB
+Serial Number:                      P300HHBB240902004980
+Firmware Version:                   APF1M3R1
+PCI Vendor/Subsystem ID:            0x1ed0
+IEEE OUI Identifier:                0x2c3ebf
+Total NVM Capacity:                 128,035,676,160 [128 GB]
+Unallocated NVM Capacity:           0
+Controller ID:                      1
+NVMe Version:                       1.3
+Number of Namespaces:               1
+Namespace 1 Size/Capacity:          128,035,676,160 [128 GB]
+Namespace 1 Formatted LBA Size:     512
+Namespace 1 IEEE EUI-64:            2c3ebf 3034393830
+Local Time is:                      Tue May 13 05:48:03 2025 UTC
+Firmware Updates (0x12):            1 Slot, no Reset required
+Optional Admin Commands (0x0017):   Security Format Frmw_DL Self_Test
+Optional NVM Commands (0x0056):     Wr_Unc DS_Mngmt Sav/Sel_Feat Timestmp
+Log Page Attributes (0x0a):         Cmd_Eff_Lg Telmtry_Lg
+Maximum Data Transfer Size:         256 Pages
+Warning  Comp. Temp. Threshold:     80 Celsius
+Critical Comp. Temp. Threshold:     85 Celsius
+
+Supported Power States
+St Op     Max   Active     Idle   RL RT WL WT  Ent_Lat  Ex_Lat
+ 0 +     3.50W       -        -    0  0  0  0        0       0
+ 1 +     1.90W       -        -    1  1  1  1        0       0
+ 2 +     1.50W       -        -    2  2  2  2        0       0
+ 3 -   0.0700W       -        -    3  3  3  3     1000    1000
+ 4 -   0.0050W       -        -    4  4  4  4     5000   45000
+
+Supported LBA Sizes (NSID 0x1)
+Id Fmt  Data  Metadt  Rel_Perf
+ 0 +     512       0         1
+ 1 -    4096       0         0
+
+=== START OF SMART DATA SECTION ===
+SMART overall-health self-assessment test result: PASSED
+
+SMART/Health Information (NVMe Log 0x02)
+Critical Warning:                   0x00
+Temperature:                        35 Celsius
+Available Spare:                    100%
+Available Spare Threshold:          5%
+Percentage Used:                    0%
+Data Units Read:                    48,679 [24.9 GB]
+Data Units Written:                 429,802 [220 GB]
+Host Read Commands:                 1,129,095
+Host Write Commands:                691,967
+Controller Busy Time:               10
+Power Cycles:                       50
+Power On Hours:                     118
+Unsafe Shutdowns:                   46
+Media and Data Integrity Errors:    0
+Error Information Log Entries:      0
+Warning  Comp. Temperature Time:    0
+Critical Comp. Temperature Time:    0
+Temperature Sensor 1:               51 Celsius
+
+Error Information (NVMe Log 0x01, 16 of 16 entries)
+No Errors Logged
+
+[1;34mCollecting baseline SMART / error log ⏳[0m
+[1;34mStartingextended NVMe self‑test (takes ~30 mins)…[0m
+Short Device self-test started
+[1;34mSelf‑test finished.[0m
+Device Self Test Log for NVME device:nvme0
+Current operation  : 0
+Current Completion : 0%
+Self Test Result[0]:
+  Operation Result             : 0
+  Self Test Code               : 1
+  Valid Diagnostic Information : 0
+  Power on hours (POH)         : 0x76
+  Vendor Specific              : 0 0
+Self Test Result[1]:
+  Operation Result             : 0
+  Self Test Code               : 1
+  Valid Diagnostic Information : 0
+  Power on hours (POH)         : 0x76
+  Vendor Specific              : 0 0
+Self Test Result[2]:
+  Operation Result             : 0
+  Self Test Code               : 2
+  Valid Diagnostic Information : 0
+  Power on hours (POH)         : 0x74
+  Vendor Specific              : 0 0
+Self Test Result[3]:
+  Operation Result             : 0
+  Self Test Code               : 1
+  Valid Diagnostic Information : 0
+  Power on hours (POH)         : 0x5c
+  Vendor Specific              : 0 0
+Self Test Result[4]:
+  Operation Result             : 0xf
+Self Test Result[5]:
+  Operation Result             : 0xf
+Self Test Result[6]:
+  Operation Result             : 0xf
+Self Test Result[7]:
+  Operation Result             : 0xf
+Self Test Result[8]:
+  Operation Result             : 0xf
+Self Test Result[9]:
+  Operation Result             : 0xf
+Self Test Result[10]:
+  Operation Result             : 0xf
+Self Test Result[11]:
+  Operation Result             : 0xf
+Self Test Result[12]:
+  Operation Result             : 0xf
+Self Test Result[13]:
+  Operation Result             : 0xf
+Self Test Result[14]:
+  Operation Result             : 0xf
+Self Test Result[15]:
+  Operation Result             : 0xf
+Self Test Result[16]:
+  Operation Result             : 0xf
+Self Test Result[17]:
+  Operation Result             : 0xf
+Self Test Result[18]:
+  Operation Result             : 0xf
+Self Test Result[19]:
+  Operation Result             : 0xf
+[1;34mExercising free space with 8×128 MiB random blocks…[0m
+blk1.bin: OK
+  ✓ chunk 1 verified
+blk2.bin: OK
+  ✓ chunk 2 verified
+blk3.bin: OK
+  ✓ chunk 3 verified
+blk4.bin: OK
+  ✓ chunk 4 verified
+blk5.bin: OK
+  ✓ chunk 5 verified
+blk6.bin: OK
+  ✓ chunk 6 verified
+blk7.bin: OK
+  ✓ chunk 7 verified
+blk8.bin: OK
+  ✓ chunk 8 verified
+[1;34mTRIMming freed blocks…[0m
+fstrim: /: the discard operation is not supported
+[0;31m[1m✗ NVME health check failed with exit code 1[0m

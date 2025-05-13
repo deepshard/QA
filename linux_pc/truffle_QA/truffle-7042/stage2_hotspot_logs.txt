@@ -1,0 +1,31 @@
+→ Successfully reached Linux PC at truffle.local
+Warning: Identity file /root/.ssh/id_hotspot not accessible: No such file or directory.
+Warning: Identity file /root/.ssh/id_hotspot not accessible: No such file or directory.
+→ Waiting 5 seconds for Linux PC script to initialize...
+→ Using Wi-Fi interface: wlP1p1s0
+→ Storing currently active connection: wifi
+Connection 'wifi' successfully deactivated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/1)
+→ Starting hotspot "truffle-7042" on wlP1p1s0 with connection name "truffle-7042-hotspot"...
+[2KDevice 'wlP1p1s0' successfully activated with '65702a96-7245-488f-a4b6-55eaa399951c'.
+Hint: "nmcli dev wifi show-password" shows the Wi-Fi name and password.
+→ Hotspot active. Details:
+truffle-7042-hotspot  65702a96-7245-488f-a4b6-55eaa399951c  wifi    wlP1p1s0 
+wlP1p1s0          wifi      connected               truffle-7042-hotspot 
+p2p-dev-wlP1p1s0  wifi-p2p  disconnected            --                   
+→ Hotspot will run for 30 seconds...
+→ Checking for connected clients (check 1)...
+Waiting for client connection to 'truffle-7042'...
+→ Checking for connected clients (check 2)...
+✅ Client connected to hotspot 'truffle-7042'!
+→ Checking for connected clients (check 3)...
+✅ Client connected to hotspot 'truffle-7042'!
+→ Stopping hotspot "truffle-7042-hotspot"...
+Connection 'truffle-7042-hotspot' successfully deactivated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/3)
+Connection 'truffle-7042-hotspot' (65702a96-7245-488f-a4b6-55eaa399951c) successfully deleted.
+→ Restoring connection: wifi
+Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/4)
+→ Waiting for WiFi reconnection...
+✅ Successfully reconnected to wifi
+⚠️ Could not reconnect to Linux PC to check results.
+✅ Hotspot test complete.
+[0;32m[1m✓ Hotspot test completed successfully[0m

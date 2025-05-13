@@ -1,0 +1,26 @@
+✅ Created directory: /home/truffle/abd_work/truffle_QA/truffle-8161
+Using interface: wlp3s0
+Disconnecting from itsalltruffles…
+Connection 'itsalltruffles' successfully deactivated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/1419)
+→ Attempt 1 of 10
+⚠️ Hotspot not found in scan results
+→ Waiting 10 seconds before next attempt...
+→ Attempt 2 of 10
+✅ Found WiFi: truffle-8161
+→ Attempting to connect to truffle-8161...
+[2KDevice 'wlp3s0' successfully activated with 'c20989e3-040c-4b80-a624-955e21cc7449'.
+→ Connection command successful
+→ Connected SSID: truffle-8161
+✅ Successfully connected to truffle-8161!
+✅ Successfully pinged 10.42.0.1 (likely the AGX Orin)
+→ Staying connected for 30 seconds...
+→ Disconnecting from hotspot...
+Error: 'truffle-8161' is not an active connection.
+Error: no active connection provided.
+Error: 'Hotspot' is not an active connection.
+Error: no active connection provided.
+Failed to disconnect from hotspot
+→ Restoring previous connection: itsalltruffles
+Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/1421)
+→ Connection restore successful
+✅ Directory created: /home/truffle/abd_work/truffle_QA/truffle-8161

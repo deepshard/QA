@@ -1,0 +1,57 @@
+stress: info: [14524] dispatching hogs: 8 cpu, 0 io, 0 vm, 0 hdd
+starting LEDController
+[SPI] Opened '/dev/spidev0.0' @ 2.500 Mbits/s 
+LEDS OFF
+ctrl+c, stopping
+LEDController cleanly shutdown
+[SPI] Closed SPI device
+[0;36m[2025-05-13 03:24:13][0m Transferred GPU CSV at Tue May 13 03:24:13 AM EDT 2025
+Using compare file: compare.ptx
+Burning for 780 seconds.
+NVIDIA Jetson AGX Orin Developer Kit
+9.7%  proc'd: 195 (2821 Gflop/s)   errors: 0   temps: -- 10.4%  proc'd: 195 (2821 Gflop/s)   errors: 0   temps: -- 
+	Summary at:   Tue May 13 03:24:35 AM EDT 2025
+
+11.0%  proc'd: 195 (2821 Gflop/s)   errors: 0   temps: -- 11.7%  proc'd: 195 (2821 Gflop/s)   errors: 0   temps: -- 12.3%  proc'd: 195 (2821 Gflop/s)   errors: 0   temps: -- 12.9%  proc'd: 195 (2821 Gflop/s)   errors: 0   temps: -- 13.6%  proc'd: 195 (2821 Gflop/s)   errors: 0   temps: -- 14.2%  proc'd: 195 (2821 Gflop/s)   errors: 0   temps: -- 14.9%  proc'd: 195 (2821 Gflop/s)   errors: 0   temps: -- [0;36m[2025-05-13 03:25:13][0m Transferred GPU CSV at Tue May 13 03:25:13 AM EDT 2025
+15.5%  proc'd: 195 (2821 Gflop/s)   errors: 0   temps: -- 16.2%  proc'd: 195 (2821 Gflop/s)   errors: 0   temps: -- 16.8%  proc'd: 195 (2821 Gflop/s)   errors: 0   temps: -- 17.4%  proc'd: 195 (2821 Gflop/s)   errors: 0   temps: -- 17.8%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- 18.1%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- 18.7%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- 19.4%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- 20.0%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- 20.6%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- 
+	Summary at:   Tue May 13 03:25:55 AM EDT 2025
+
+21.3%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- 21.9%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- 22.6%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- [0;36m[2025-05-13 03:26:15][0m Transferred GPU CSV at Tue May 13 03:26:15 AM EDT 2025
+23.2%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- 23.8%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- 24.5%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- 25.1%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- 25.8%  proc'd: 390 (3440 Gflop/s)   errors: 0   temps: -- 25.8%  proc'd: 585 (3440 Gflop/s)   errors: 0   temps: -- 26.4%  proc'd: 585 (3440 Gflop/s)   errors: 0   temps: -- 27.1%  proc'd: 585 (3440 Gflop/s)   errors: 0   temps: -- 27.7%  proc'd: 585 (3440 Gflop/s)   errors: 0   temps: -- 28.3%  proc'd: 585 (3440 Gflop/s)   errors: 0   temps: -- 29.0%  proc'd: 585 (3440 Gflop/s)   errors: 0   temps: -- 29.6%  proc'd: 585 (3440 Gflop/s)   errors: 0   temps: -- 30.3%  proc'd: 585 (3440 Gflop/s)   errors: 0   temps: -- 30.9%  proc'd: 585 (3440 Gflop/s)   errors: 0   temps: -- 
+	Summary at:   Tue May 13 03:27:15 AM EDT 2025
+[0;36m[2025-05-13 03:27:16][0m Transferred GPU CSV at Tue May 13 03:27:16 AM EDT 2025
+
+31.5%  proc'd: 585 (3440 Gflop/s)   errors: 0   temps: -- 32.2%  proc'd: 585 (3440 Gflop/s)   errors: 0   temps: -- 32.8%  proc'd: 585 (3440 Gflop/s)   errors: 0   temps: -- 33.5%  proc'd: 585 (3440 Gflop/s)   errors: 0   temps: -- 33.7%  proc'd: 780 (3441 Gflop/s)   errors: 0   temps: -- 34.1%  proc'd: 780 (3441 Gflop/s)   errors: 0   temps: -- 34.7%  proc'd: 780 (3441 Gflop/s)   errors: 0   temps: -- 35.4%  proc'd: 780 (3441 Gflop/s)   errors: 0   temps: -- 36.0%  proc'd: 780 (3441 Gflop/s)   errors: 0   temps: -- 36.7%  proc'd: 780 (3441 Gflop/s)   errors: 0   temps: -- 37.3%  proc'd: 780 (3441 Gflop/s)   errors: 0   temps: -- 37.9%  proc'd: 780 (3441 Gflop/s)   errors: 0   temps: -- 38.6%  proc'd: 780 (3441 Gflop/s)   errors: 0   temps: -- [0;36m[2025-05-13 03:28:17][0m Transferred GPU CSV at Tue May 13 03:28:17 AM EDT 2025
+39.2%  proc'd: 780 (3441 Gflop/s)   errors: 0   temps: -- 39.9%  proc'd: 780 (3441 Gflop/s)   errors: 0   temps: -- 40.5%  proc'd: 780 (3441 Gflop/s)   errors: 0   temps: -- 41.2%  proc'd: 780 (3441 Gflop/s)   errors: 0   temps: -- 
+	Summary at:   Tue May 13 03:28:35 AM EDT 2025
+
+41.8%  proc'd: 975 (3442 Gflop/s)   errors: 0   temps: -- 41.8%  proc'd: 975 (3442 Gflop/s)   errors: 0   temps: -- 42.4%  proc'd: 975 (3442 Gflop/s)   errors: 0   temps: -- 43.1%  proc'd: 975 (3442 Gflop/s)   errors: 0   temps: -- 43.7%  proc'd: 975 (3442 Gflop/s)   errors: 0   temps: -- 44.4%  proc'd: 975 (3442 Gflop/s)   errors: 0   temps: -- 45.0%  proc'd: 975 (3442 Gflop/s)   errors: 0   temps: -- 45.6%  proc'd: 975 (3442 Gflop/s)   errors: 0   temps: -- TWO-STAGE THERMAL TEST
+STAGE 0: 0.1 hours WITHOUT LEDs
+STAGE 1: 0.1 hours WITH LEDs
+LOGGING TO CSV EVERY 5 SECONDS
+SAVING TO /home/truffle/qa/scripts/logs/stage2_burn_log.csv
+Starting CPU and GPU stress...
+Turning off LEDs...
+LEDs turned off successfully
+
+Status: STAGE 0 (WITHOUT LEDs)
+Time elapsed: 0.08 hours / 0.20 hours total
+Junction temp: 73.437°C, Fan: 77.25490196078431%
+
+--- SWITCHING TO STAGE 1: WITH LEDS ---
+Starting LED stress...
+Traceback (most recent call last):
+  File "/home/truffle/qa/THERMALTEST/test.py", line 141, in <module>
+    led_process = start_led_benchmark()
+  File "/home/truffle/qa/THERMALTEST/test.py", line 66, in start_led_benchmark
+    return _start(led_stress_command)
+  File "/home/truffle/qa/THERMALTEST/test.py", line 55, in _start
+    return subprocess.Popen(cmd, preexec_fn=os.setsid)
+  File "/usr/lib/python3.10/subprocess.py", line 971, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "/usr/lib/python3.10/subprocess.py", line 1863, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: '/home/truffle/led_renderer_og/led_white'
+[0;31m[1m✗ GPU/CPU burn test failed with exit code 1[0m
+46.3%  proc'd: 975 (3442 Gflop/s)   errors: 0   temps: -- [0;36m[2025-05-13 03:29:18][0m Transferred GPU CSV at Tue May 13 03:29:18 AM EDT 2025
+46.9%  proc'd: 975 (3442 Gflop/s)   errors: 0   temps: -- 

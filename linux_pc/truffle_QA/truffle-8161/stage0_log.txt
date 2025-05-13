@@ -1,0 +1,21 @@
+Stage 0 started
+Starting package installation phase
+gdisk is already installed
+SSH and Avahi are already installed and running
+Starting hostname setup phase
+Hostname is already correctly set
+Starting Git configuration phase
+Git is already configured correctly
+Starting repository setup phase
+QA repository already exists
+Starting power mode and SPI setup phase
+Initial power mode: 0
+Initial SPI status: Enabled
+SPI already enabled.
+Power mode is already MAXN.
+Starting SSH key setup phase
+SSH key already exists. Skipping generation
+Copying public key to truffle@truffle.local
+SSH connection successful with password
+Public key copied to remote host successfully
+Stage 0 completed. No reboot required.

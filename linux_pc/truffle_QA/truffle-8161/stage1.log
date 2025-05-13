@@ -1,0 +1,45 @@
+[2025-05-13 02:58:49] Stage 1 script started
+[2025-05-13 02:58:49] ===========================================
+[2025-05-13 02:58:49] STARTING PHASE: Stage 0 Verification
+[2025-05-13 02:58:49] ===========================================
+[2025-05-13 02:58:50] ✅ SUCCESS: Power mode is confirmed to be MAXN (Mode 0)
+[2025-05-13 02:58:50] ✅ SUCCESS: SPI is confirmed to be enabled
+[2025-05-13 02:58:50] ✅ SUCCESS: Hostname is correctly formatted: truffle-8161
+[2025-05-13 02:58:50] ✅ SUCCESS: Git email is correctly configured
+[2025-05-13 02:58:50] ✅ SUCCESS: Git name is correctly configured
+[2025-05-13 02:58:50] ✅ SUCCESS: QA repository exists at /home/truffle/qa
+[2025-05-13 02:58:50] ✅ SUCCESS: QA repository has correct remote URL
+[2025-05-13 02:58:50] ✅ SUCCESS: SSH service is running
+[2025-05-13 02:58:50] ✅ SUCCESS: Avahi daemon is running
+[2025-05-13 02:58:50] ----------------------------------------
+[2025-05-13 02:58:50] COMPLETED PHASE: Stage 0 Verification
+[2025-05-13 02:58:50] ----------------------------------------
+[2025-05-13 02:58:50] ===========================================
+[2025-05-13 02:58:50] STARTING PHASE: LED Test
+[2025-05-13 02:58:50] ===========================================
+[2025-05-13 02:58:50] Testing all LED states
+[2025-05-13 02:58:50] Testing WHITE LED
+[2025-05-13 02:58:50] Starting LED White Program
+[2025-05-13 02:58:53] Stopping LED process (PID: 5478)
+[2025-05-13 02:58:53] Running LED OFF command
+[2025-05-13 02:58:54] Testing RED LED
+[2025-05-13 02:58:54] Starting LED Red Program
+[2025-05-13 02:58:57] Stopping LED process (PID: 5561)
+[2025-05-13 02:58:57] Running LED OFF command
+[2025-05-13 02:58:58] Testing GREEN LED
+[2025-05-13 02:58:58] Starting LED Green Program
+[2025-05-13 02:59:01] Stopping LED process (PID: 5592)
+[2025-05-13 02:59:01] Running LED OFF command
+[2025-05-13 02:59:02] Testing BLUE LED
+[2025-05-13 02:59:02] Starting LED Blue Program
+[2025-05-13 02:59:05] Stopping LED process (PID: 5620)
+[2025-05-13 02:59:05] Running LED OFF command
+[2025-05-13 02:59:06] ✅ SUCCESS: LED test completed
+[2025-05-13 02:59:06] ----------------------------------------
+[2025-05-13 02:59:06] COMPLETED PHASE: LED Test
+[2025-05-13 02:59:06] ----------------------------------------
+[2025-05-13 02:59:06] Completing stage1 log for transfer
+[2025-05-13 02:59:06] ----------------------------------------
+[2025-05-13 02:59:06] COMPLETED PHASE: Log Transfer
+[2025-05-13 02:59:06] ----------------------------------------
+[2025-05-13 02:59:06] Stage 1 check completed successfully
