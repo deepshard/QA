@@ -164,13 +164,48 @@ log "Starting repository setup phase"
 
 QA_DIR="/home/truffle/qa"
 if [ ! -d "$QA_DIR/.git" ]; then
+  log "Preparing SSH credentials for truffle user → GitHub"
+
+  #
+  # 1.  Ensure the truffle user has a usable ~/.ssh directory
+  #
+  su - truffle -c "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
+
+  #
+  # 2.  Make sure GitHub's host key is already trusted
+  #     – avoids the first-time interactive “yes/no” question.
+  #
+  su - truffle -c '
+    if ! ssh-keygen -F github.com > /dev/null 2>&1; then
+      echo "Adding github.com to known_hosts"
+      ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+    fi
+  '
+
+  #
+  # 3.  Guarantee an ED25519 key is present (do *not* recreate if it already
+  #     exists – the public key is assumed to have been uploaded to GitHub).
+  #
+  su - truffle -c '
+    if [ ! -f ~/.ssh/id_ed25519 ]; then
+      echo "Generating ED25519 key for GitHub access"
+      ssh-keygen -t ed25519 -C "muhammad@deepshard.org" -N "" -q -f ~/.ssh/id_ed25519
+    fi
+  '
+
+  #
+  # 4.  Start an ssh-agent for the current shell and add the key so the very
+  #     first Git operation succeeds without a password prompt.
+  #
+  su - truffle -c 'eval "$(ssh-agent -s)" && ssh-add ~/.ssh/id_ed25519 2>/dev/null'
+
   log "Cloning QA repository..."
   # Ensure the parent directory exists and has correct permissions
   mkdir -p /home/truffle
   chown truffle:truffle /home/truffle
   
-  # Clone the repository as the truffle user
-  su - truffle -c "git clone git@github.com:deepshard/QA.git $QA_DIR"
+  # Clone the repository as the truffle user, suppressing any remaining prompts
+  su - truffle -c "GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no' git clone git@github.com:deepshard/QA.git $QA_DIR"
   
   # Verify repository clone
   if [ -d "$QA_DIR/.git" ]; then
@@ -188,7 +223,6 @@ if [ ! -d "$QA_DIR/.git" ]; then
 else
   log "QA repository already exists"
 fi
-
 ########################################
 # PHASE 6: Power Mode and SPI Setup
 ########################################
@@ -319,3 +353,4 @@ if [ "$REBOOT_NEEDED" = true ]; then
 else
   log "Stage 0 completed. No reboot required."
 fi
+
