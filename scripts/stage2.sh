@@ -29,12 +29,17 @@ LOG_DIR="$HOME/$(hostname)_log"
 
 # Log files for individual tests
 HOTSPOT_LOG_FILE="${SCRIPTS_LOG_DIR}/stage2_hotspot_logs.txt"
-NVME_LOG_FILE="${SCRIPTS_LOG_DIR}/stage2_nvme.log"
-GPU_LOG_FILE="${SCRIPTS_LOG_DIR}/stage2_burn.log"
+NVME_LOG_FILE="${SCRIPTS_LOG_DIR}/stage2_nvme_log.txt"
+GPU_LOG_FILE="${SCRIPTS_LOG_DIR}/stage2_burn_log.txt"
 
 # Remote machine configuration
 REMOTE_USER="truffle"
-REMOTE_HOST="truffle.local"
+
+# List of possible mDNS hostnames to try (in order of preference)
+REMOTE_HOSTS=("truffle.local" "truffle-2.local")
+# Active hostname – will be updated dynamically once a working host is found
+REMOTE_HOST="${REMOTE_HOSTS[0]}"
+
 REMOTE_BASE_DIR="/home/truffle/abd_work/truffle_QA"
 
 # Get hostname for remote directory
@@ -80,30 +85,50 @@ phase_end() {
 scp_to_remote() {
   local source_file="$1"
   local dest_file="$2"
-  
-  log "Transferring $source_file to ${REMOTE_USER}@${REMOTE_HOST}:${dest_file}"
-  
-  # Try with SSH keys first
-  if scp -o BatchMode=yes -o ConnectTimeout=5 "$source_file" "${REMOTE_USER}@${REMOTE_HOST}:${dest_file}" 2>/dev/null; then
-    success "File transferred successfully using SSH key"
-  else
-    log "SSH key transfer failed, trying with password..."
-    # Check if sshpass is installed, if not try to install it
-    if ! command -v sshpass &> /dev/null; then
-      log "Installing sshpass..."
-      sudo apt-get update -y && sudo apt-get install -y sshpass
+
+  # Keep track of hosts already attempted during this call
+  local -a tried_hosts=()
+
+  # Prefer the last known working host first, then fall back to the full list
+  local host_list=("$REMOTE_HOST" "${REMOTE_HOSTS[@]}")
+
+  for host in "${host_list[@]}"; do
+    # Skip empty or duplicate entries
+    if [ -z "$host" ]; then
+      continue
     fi
-    
-    # Try with sshpass
-    if command -v sshpass &> /dev/null && sshpass -p "$SSH_PASSWORD" scp "$source_file" "${REMOTE_USER}@${REMOTE_HOST}:${dest_file}"; then
-      success "File transferred successfully using password"
+    if [[ " ${tried_hosts[*]} " =~ " $host " ]]; then
+      continue
+    fi
+    tried_hosts+=("$host")
+
+    log "Transferring $source_file to ${REMOTE_USER}@${host}:${dest_file}"
+    # Try key-based auth first
+    if scp -o BatchMode=yes -o ConnectTimeout=5 "$source_file" "${REMOTE_USER}@${host}:${dest_file}" 2>/dev/null; then
+      success "File transferred successfully to ${host} using SSH key"
+      REMOTE_HOST="$host"
+      return 0
     else
-      fail "Failed to transfer file $source_file"
-      led_red
-      sleep 10
-      return 1
+      log "SSH key transfer to ${host} failed, trying with password..."
+      # Ensure sshpass is available
+      if ! command -v sshpass &> /dev/null; then
+        log "Installing sshpass..."
+        sudo apt-get update -y && sudo apt-get install -y sshpass
+      fi
+
+      if command -v sshpass &> /dev/null && sshpass -p "$SSH_PASSWORD" scp "$source_file" "${REMOTE_USER}@${host}:${dest_file}"; then
+        success "File transferred successfully to ${host} using password"
+        REMOTE_HOST="$host"
+        return 0
+      fi
     fi
-  fi
+  done
+
+  # If we reach here, every host failed
+  fail "Failed to transfer file $source_file to all hosts (${REMOTE_HOSTS[*]})"
+  led_red
+  sleep 10
+  return 1
 }
 
 # LED functions with proper kill and cleanup
@@ -194,26 +219,33 @@ log "Device serial ends with: $last4"
 
 # Setup remote directory and transfer existing logs
 log "Setting up remote directory and transferring existing logs"
-# Try with SSH key first
-if ssh -o BatchMode=yes -o ConnectTimeout=5 "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p \"${REMOTE_DIR}\"" 2>/dev/null; then
-  success "Remote directory created using SSH key"
-else
-  log "SSH key authentication failed, trying with password..."
-  # Check if sshpass is installed
-  if ! command -v sshpass &> /dev/null; then
-    log "Installing sshpass..."
-    sudo apt-get update -y && sudo apt-get install -y sshpass
-  fi
-  
-  # Try with sshpass
-  if command -v sshpass &> /dev/null && sshpass -p "$SSH_PASSWORD" ssh "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p \"${REMOTE_DIR}\""; then
-    success "Remote directory created using password"
+
+REMOTE_HOST=""  # Reset – will capture the first host that works
+for host in "${REMOTE_HOSTS[@]}"; do
+  log "Attempting to create remote directory on host: ${host}"
+  if ssh -o BatchMode=yes -o ConnectTimeout=5 "${REMOTE_USER}@${host}" "mkdir -p \"${REMOTE_DIR}\"" 2>/dev/null; then
+    success "Remote directory created on ${host} using SSH key"
+    REMOTE_HOST="$host"
+    break
   else
-    fail "Failed to create remote directory"
-    led_red
-    sleep 10
-    # Continue anyway as other parts of the script might work
+    log "SSH key authentication to ${host} failed, trying with password..."
+    if ! command -v sshpass &> /dev/null; then
+      log "Installing sshpass..."
+      sudo apt-get update -y && sudo apt-get install -y sshpass
+    fi
+    if command -v sshpass &> /dev/null && sshpass -p "$SSH_PASSWORD" ssh "${REMOTE_USER}@${host}" "mkdir -p \"${REMOTE_DIR}\""; then
+      success "Remote directory created on ${host} using password"
+      REMOTE_HOST="$host"
+      break
+    fi
   fi
+done
+
+if [ -z "$REMOTE_HOST" ]; then
+  fail "Failed to create remote directory on all hosts (${REMOTE_HOSTS[*]})"
+  led_red
+  sleep 10
+  # Continue anyway; other parts of the script might still work
 fi
 
 # Transfer any existing log files

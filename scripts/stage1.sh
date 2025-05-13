@@ -14,8 +14,7 @@ LED_OFF="/home/truffle/qa/led_test/ledoff"
 LED_PID=""
 
 # Set absolute paths for log files
-STAGE0_LOG="$(pwd)/logs/stage1_log.txt"
-LOG_FILE="$(pwd)/logs/stage1.log"
+LOG_FILE="$(pwd)/logs/stage1_log.txt"
 
 # Clear any existing log file
 > "$LOG_FILE"
@@ -226,10 +225,10 @@ log "Stage 1 check completed successfully"
 
 # This will be executed after the script completes
 # We're using trap to ensure LED's are off
-# Added for the final transfer of stage1.log after all logging is complete
+# Added for the final transfer of stage1_log.txt after all logging is complete
 (
   sleep 1
-  scp "$LOG_FILE" "${TARGET_USER}@${TARGET_IP}:${TARGET_DIR}/stage1.log" 2>/dev/null
+  scp "$LOG_FILE" "${TARGET_USER}@${TARGET_IP}:${TARGET_DIR}/stage1_log.txt" 2>/dev/null
   # Clean up log files after transfer
   if [ $? -eq 0 ]; then
     echo "Log files transferred and cleaned up"

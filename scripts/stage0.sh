@@ -1,9 +1,9 @@
 #!/bin/bash
 # Create logs directory in /home/truffle/qa/scripts/logs
 mkdir -p "/home/truffle/qa/scripts/logs"
-mkdir -p "$(pwd)/logs"
+
 # Log file setup
-LOG_FILE="$(pwd)/logs/stage0_log.txt"
+LOG_FILE="/home/truffle/qa/scripts/logs/stage0_log.txt"
 # Clear any existing log file
 > "$LOG_FILE"
 
@@ -166,41 +166,6 @@ log "Starting repository setup phase"
 
 QA_DIR="/home/truffle/qa"
 if [ ! -d "$QA_DIR/.git" ]; then
-  log "Preparing SSH credentials for truffle user → GitHub"
-
-  #
-  # 1.  Ensure the truffle user has a usable ~/.ssh directory
-  #
-  su - truffle -c "mkdir -p ~/.ssh && chmod 700 ~/.ssh"
-
-  #
-  # 2.  Make sure GitHub's host key is already trusted
-  #     – avoids the first-time interactive "yes/no" question.
-  #
-  su - truffle -c '
-    if ! ssh-keygen -F github.com > /dev/null 2>&1; then
-      echo "Adding github.com to known_hosts"
-      ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
-    fi
-  '
-
-  #
-  # 3.  Guarantee an ED25519 key is present (do *not* recreate if it already
-  #     exists – the public key is assumed to have been uploaded to GitHub).
-  #
-  su - truffle -c '
-    if [ ! -f ~/.ssh/id_ed25519 ]; then
-      echo "Generating ED25519 key for GitHub access"
-      ssh-keygen -t ed25519 -C "muhammad@deepshard.org" -N "" -q -f ~/.ssh/id_ed25519
-    fi
-  '
-
-  #
-  # 4.  Start an ssh-agent for the current shell and add the key so the very
-  #     first Git operation succeeds without a password prompt.
-  #
-  su - truffle -c 'eval "$(ssh-agent -s)" && ssh-add ~/.ssh/id_ed25519 2>/dev/null'
-
   log "Cloning QA repository..."
   # Remove existing qa directory if it exists
   rm -rf "$QA_DIR"
@@ -209,14 +174,11 @@ if [ ! -d "$QA_DIR/.git" ]; then
   mkdir -p /home/truffle
   chown truffle:truffle /home/truffle
   
-  # Clone the repository as the truffle user with verbose output
-  log "Attempting to clone with verbose output..."
-  su - truffle -c "GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no -v' git clone -v git@github.com:deepshard/QA.git $QA_DIR 2>&1" | tee -a "$LOG_FILE"
+  # Clone the repository as the truffle user (simplified approach)
+  su - truffle -c "git clone git@github.com:deepshard/QA.git $QA_DIR"
   
   # Check the clone result and directory ownership
   if [ $? -eq 0 ] && [ -d "$QA_DIR/.git" ]; then
-    # Ensure proper ownership
-    chown -R truffle:truffle "$QA_DIR"
     verify "QA repository cloned successfully"
     # Verify remote URL
     REMOTE_URL=$(su - truffle -c "cd $QA_DIR && git remote get-url origin")
@@ -226,7 +188,7 @@ if [ ! -d "$QA_DIR/.git" ]; then
       log "❌ Repository remote URL verification failed"
     fi
   else
-    log "❌ Repository clone failed. Please check the logs above for SSH debugging information"
+    log "❌ Repository clone failed"
   fi
 else
   log "QA repository already exists"
@@ -236,96 +198,111 @@ fi
 ########################################
 log "Starting SPI setup phase"
 
-# Check if SPI is enabled and log it
-if grep -q "^dtparam=spi=on" /boot/config.txt; then
-  log "Initial SPI status: Enabled"
+# Check if SPI-1 is properly configured using marker file and actual state
+if [[ -e /var/lib/spi-test.done ]]; then
+    log "Marker file found – SPI‑1 should already be configured"
+    if /opt/nvidia/jetson-io/config-by-function.py -l enabled | grep -q spi1; then
+        log "SPI‑1 confirmed enabled"
+        verify "SPI-1 is properly configured"
+    else
+        log "❌ ERROR: SPI‑1 NOT enabled even though marker exists"
+        exit 1
+    fi
 else
-  log "Initial SPI status: Disabled"
-fi
+    log "Marker file missing – treating this as first run"
+    if /opt/nvidia/jetson-io/config-by-function.py -l enabled | grep -q spi1; then
+        log "SPI‑1 already enabled → creating marker"
+        touch /var/lib/spi-test.done
+        verify "SPI-1 marker created"
+    else
+        log "SPI‑1 disabled → enabling it now"
+        # Some boards need the 'dt' path first (it fails harmlessly on Orin)
+        /opt/nvidia/jetson-io/config-by-function.py -o dt 1="spi1" || true
+        /opt/nvidia/jetson-io/config-by-function.py -o dtbo spi1
+        verify "SPI-1 configuration commands executed"
 
-# Check and enable SPI if not enabled
-if ! grep -q "^dtparam=spi=on" /boot/config.txt; then
-  log "SPI not enabled. Enabling now..."
-  log "Command: modifying /boot/config.txt to enable SPI"
-  
-  sed -i 's/^#dtparam=spi=on/dtparam=spi=on/' /boot/config.txt 2>/dev/null || \
-  echo "dtparam=spi=on" >> /boot/config.txt
-  
-  REBOOT_NEEDED=true
-  log "SPI enabled. Reboot will be required."
-else
-  log "SPI already enabled."
+        log "Adding overlay to extlinux.conf"
+        sed -i '/^LABEL .*/{
+            :a; n; /^\s*$/b end; /^ *FDTOVERLAY /b end;
+            /^ *APPEND /a\ \ \ FDTOVERLAY /boot/jetson-io-hdr40-user-custom.dtbo
+            ba; :end
+        }' /boot/extlinux/extlinux.conf
+        verify "Added overlay to extlinux.conf"
+
+        REBOOT_NEEDED=true
+        log "SPI configuration complete - reboot will be required"
+    fi
 fi
 
 ########################################
 # PHASE 7: SSH KEY SETUP
 ########################################
 # Configuration for SSH setup
-REMOTE_USER="truffle"
-REMOTE_HOST="truffle.local"
-SSH_KEY_FILE="/root/.ssh/id_ed25519"
+# REMOTE_USER="truffle"
+# REMOTE_HOST="truffle.local"
+# SSH_KEY_FILE="/root/.ssh/id_ed25519"
 
-log "Starting SSH key setup phase"
+# log "Starting SSH key setup phase"
 
-# Ensure .ssh directory exists with correct permissions
-if [ ! -d "/root/.ssh" ]; then
-  log "Creating /root/.ssh directory"
-  mkdir -p /root/.ssh
-  chmod 700 /root/.ssh
-fi
+# # Ensure .ssh directory exists with correct permissions
+# if [ ! -d "/root/.ssh" ]; then
+#   log "Creating /root/.ssh directory"
+#   mkdir -p /root/.ssh
+#   chmod 700 /root/.ssh
+# fi
 
 # Generate key pair if it does not already exist
-if [ ! -f "$SSH_KEY_FILE" ]; then
-  log "SSH key not found. Generating new Ed25519 key pair at $SSH_KEY_FILE"
-  ssh-keygen -t ed25519 -f "$SSH_KEY_FILE" -N "" -q
-  if [ $? -eq 0 ]; then
-    log "SSH key generated successfully"
-  else
-    log "Failed to generate SSH key"
-  fi
-else
-  log "SSH key already exists. Skipping generation"
-fi
+# if [ ! -f "$SSH_KEY_FILE" ]; then
+#   log "SSH key not found. Generating new Ed25519 key pair at $SSH_KEY_FILE"
+#   ssh-keygen -t ed25519 -f "$SSH_KEY_FILE" -N "" -q
+#   if [ $? -eq 0 ]; then
+#     log "SSH key generated successfully"
+#   else
+#     log "Failed to generate SSH key"
+#   fi
+# else
+#   log "SSH key already exists. Skipping generation"
+# fi
 
-# Add remote host to known_hosts to avoid prompts
-if ! ssh-keygen -F "$REMOTE_HOST" >/dev/null; then
-  log "Fetching and adding $REMOTE_HOST to known_hosts"
-  ssh-keyscan -H "$REMOTE_HOST" >> /root/.ssh/known_hosts 2>/dev/null || true
-fi
+# # Add remote host to known_hosts to avoid prompts
+# if ! ssh-keygen -F "$REMOTE_HOST" >/dev/null; then
+#   log "Fetching and adding $REMOTE_HOST to known_hosts"
+#   ssh-keyscan -H "$REMOTE_HOST" >> /root/.ssh/known_hosts 2>/dev/null || true
+# fi
 
-# Copy public key to the remote machine for passwordless SSH
-log "Copying public key to $REMOTE_USER@$REMOTE_HOST"
+# # Copy public key to the remote machine for passwordless SSH
+# log "Copying public key to $REMOTE_USER@$REMOTE_HOST"
 
-# Check if sshpass is installed
-if ! command -v sshpass &> /dev/null; then
-  log "sshpass not found. Attempting to install..."
-  apt-get update -y && apt-get install -y sshpass
-fi
+# # Check if sshpass is installed
+# if ! command -v sshpass &> /dev/null; then
+#   log "sshpass not found. Attempting to install..."
+#   apt-get update -y && apt-get install -y sshpass
+# fi
 
-# Use sshpass to provide the password automatically
-if command -v sshpass &> /dev/null; then
-  # First test connection with password
-  if sshpass -p "runescape" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" 'echo "SSH connection successful"'; then
-    log "SSH connection successful with password"
+# # Use sshpass to provide the password automatically
+# if command -v sshpass &> /dev/null; then
+#   # First test connection with password
+#   if sshpass -p "runescape" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" 'echo "SSH connection successful"'; then
+#     log "SSH connection successful with password"
     
-    # Now copy the key using password
-    if sshpass -p "runescape" ssh-copy-id -i "${SSH_KEY_FILE}.pub" -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST"; then
-      log "Public key copied to remote host successfully"
-    else
-      log "Failed to copy public key with sshpass"
-    fi
-  else
-    log "Failed to connect with password. Trying alternative method..."
-    # Fall back to original method
-    SSH_COPY_CMD="cat ${SSH_KEY_FILE}.pub | ssh ${REMOTE_USER}@${REMOTE_HOST} 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'"
-    eval $SSH_COPY_CMD
-  fi
-else
-  # Fall back to original method if sshpass installation failed
-  log "sshpass not available. You may be prompted for password."
-  SSH_COPY_CMD="cat ${SSH_KEY_FILE}.pub | ssh ${REMOTE_USER}@${REMOTE_HOST} 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'"
-  eval $SSH_COPY_CMD
-fi
+#     # Now copy the key using password
+#     if sshpass -p "runescape" ssh-copy-id -i "${SSH_KEY_FILE}.pub" -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST"; then
+#       log "Public key copied to remote host successfully"
+#     else
+#       log "Failed to copy public key with sshpass"
+#     fi
+#   else
+#     log "Failed to connect with password. Trying alternative method..."
+#     # Fall back to original method
+#     SSH_COPY_CMD="cat ${SSH_KEY_FILE}.pub | ssh ${REMOTE_USER}@${REMOTE_HOST} 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'"
+#     eval $SSH_COPY_CMD
+#   fi
+# else
+#   # Fall back to original method if sshpass installation failed
+#   log "sshpass not available. You may be prompted for password."
+#   SSH_COPY_CMD="cat ${SSH_KEY_FILE}.pub | ssh ${REMOTE_USER}@${REMOTE_HOST} 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'"
+#   eval $SSH_COPY_CMD
+# fi
 
 ########################################
 # PHASE 8: Additional Tools Installation

@@ -1,0 +1,55 @@
+sudo bash -c 'cat > /etc/systemd/system/and-it-begins.service << EOL
+[Unit]
+Description=Run and_it_begins.sh on boot
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/truffle/and_it_begins.sh
+RemainAfterExit=yes
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOL'
+
+the we did this
+sudo systemctl daemon-reload
+sudo systemctl enable and-it-begins.service
+sudo systemctl start and-it-begins.service
+^ put in rootfs along with the script so it runs on first boot
+
+this is how to enable and check for spi 
+
+if [[ -e /var/lib/spi-test.done ]]; then
+    echo "Marker file found – SPI‑1 should already be configured"
+    if sudo /opt/nvidia/jetson-io/config-by-function.py -l enabled | grep -q spi1; then
+        echo "SPI‑1 confirmed enabled → running tests"
+        run_tests
+    else
+        echo "ERROR: SPI‑1 NOT enabled even though marker exists"
+        exit 1
+    fi
+else
+    echo "Marker file missing – treating this as first run"
+    if sudo /opt/nvidia/jetson-io/config-by-function.py -l enabled | grep -q spi1; then
+        echo "SPI‑1 already enabled → create marker & run tests"
+        sudo touch /var/lib/spi-test.done
+        run_tests
+    else
+        echo "SPI‑1 disabled → enabling it now"
+        # Some boards need the 'dt' path first (it fails harmlessly on Orin)
+        sudo /opt/nvidia/jetson-io/config-by-function.py -o dt 1="spi1" || true
+        sudo /opt/nvidia/jetson-io/config-by-function.py -o dtbo spi1
+
+        echo "Adding overlay to extlinux.conf"
+        sudo sed -i '/^LABEL .*/{
+            :a; n; /^\s*$/b end; /^ *FDTOVERLAY /b end;
+            /^ *APPEND /a\ \ \ FDTOVERLAY /boot/jetson-io-hdr40-user-custom.dtbo
+            ba; :end
+        }' /boot/extlinux/extlinux.conf
+
+        echo "Reboot required – marker will be created by ExecStartPost"
+        exit 0
+    fi
+fi
