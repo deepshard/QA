@@ -14,6 +14,7 @@ from jtop import jtop
 import subprocess
 import sys
 import signal
+
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='Two-stage thermal test with LED control')
 parser.add_argument('--stage-one', type=float, default=2.0,
@@ -26,12 +27,16 @@ args = parser.parse_args()
 STAGE_ONE_DURATION = int(args.stage_one * 3600)  # Convert hours to seconds
 STAGE_TWO_DURATION = int(args.stage_two * 3600)  # Convert hours to seconds
 TOTAL_DURATION = STAGE_ONE_DURATION + STAGE_TWO_DURATION
+
 # How often to write data to CSV file (seconds)
 LOG_INTERVAL = 5
+
 # Get the directory containing the script
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Change to the script's directory to ensure all relative paths work
 os.chdir(SCRIPT_DIR)
+
 print(f"TWO-STAGE THERMAL TEST")
 print(f"STAGE 0: {args.stage_one:.1f} hours WITHOUT LEDs")
 print(f"STAGE 1: {args.stage_two:.1f} hours WITH LEDs")
@@ -95,13 +100,12 @@ def signal_handler(sig, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
-# Create a timestamped filename for the CSV log
-timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-csv_filename = f"./benchmarks/benchmark_log_{timestamp}.csv"
+# Create a fixed filename for the CSV log (no timestamp)
+csv_filename = "/home/truffle/qa/scripts/logs/stage2_burn_log.csv"
 print(f"SAVING TO {csv_filename}")
 
-# Create benchmarks directory if it doesn't exist
-os.makedirs("./benchmarks", exist_ok=True)
+# Create logs directory if it doesn't exist
+os.makedirs("/home/truffle/qa/scripts/logs", exist_ok=True)
 
 # Start the CPU and GPU benchmarks
 benchmark_processes = start_cpu_gpu_benchmark()
@@ -173,6 +177,8 @@ with open(csv_filename, mode='w', newline='') as csvfile:
 
             # Write the data row to the CSV file
             writer.writerow(row)
+            # Make sure to flush to disk so the file is always up to date
+            csvfile.flush()
 
             # Sleep to control logging frequency
             time.sleep(LOG_INTERVAL)

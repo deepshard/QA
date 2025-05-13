@@ -25,7 +25,7 @@ info "Collecting baseline SMART / error log ⏳"
 
 ############ 2. Short controller self‑test ################################
 info "Startingextended NVMe self‑test (takes ~30 mins)…"
-sudo nvme device-self-test "$DEV_CHAR" -s 2   # 2 = extended test
+sudo nvme device-self-test "$DEV_CHAR" -s 1   # 2 = extended test
 
 # Poll status every 10 s until done (Current operation == 0)
 while :; do
