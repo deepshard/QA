@@ -75,10 +75,36 @@ sudo nmcli -f NAME,UUID,TYPE,DEVICE connection show --active | grep -i "$CONN_NA
 sudo nmcli device status | grep "$IFACE"
 echo "→ Hotspot will run for $DURATION seconds..."
 
+# Helper: check if at least one client is associated to the hotspot
+client_connected() {
+    # 1) Try using iw (works when driver supports station dump)
+    if sudo iw dev "$IFACE" station dump 2>/dev/null | grep -q 'Station'; then
+        return 0
+    fi
+
+    # 2) Fallback to hostapd_cli (more reliable on some Broadcom/Realtek chipsets)
+    if command -v hostapd_cli &>/dev/null; then
+        if sudo hostapd_cli -i "$IFACE" all_sta 2>/dev/null | grep -qE '^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}'; then
+            return 0
+        fi
+    fi
+
+    # 3) Last-chance: look for reachable peers in the ARP/neighbor table on the hotspot interface
+    if ip neigh show dev "$IFACE" | grep -q 'REACHABLE'; then
+        return 0
+    fi
+
+    return 1
+}
+
 # 7) Check for connected clients periodically
 for i in $(seq 1 $((DURATION/10))); do
     echo "→ Checking for connected clients (check $i)..."
-    sudo iw dev "$IFACE" station dump 2>/dev/null | grep -q Station && echo "✅ Client connected to hotspot '$HOST_SSID'!" || echo "Waiting for client connection to '$HOST_SSID'..."
+    if client_connected; then
+        echo "✅ Client connected to hotspot '$HOST_SSID'!"
+    else
+        echo "Waiting for client connection to '$HOST_SSID'..."
+    fi
     sleep 10
 done
 

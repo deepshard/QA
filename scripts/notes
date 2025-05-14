@@ -1,3 +1,8 @@
+prerequisites
+on the linux pc
+sudo chown -R truffle:truffle /home/truffle/abd_work/truffle_QA
+sudo chmod -R u+rwX /home/truffle/abd_work/truffle_QA
+
 sudo bash -c 'cat > /etc/systemd/system/and-it-begins.service << EOL
 [Unit]
 Description=Run and_it_begins.sh on boot

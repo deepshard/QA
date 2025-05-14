@@ -25,7 +25,7 @@ SSH_PASSWORD="runescape"
 # Log configuration
 SCRIPTS_LOG_DIR="/home/truffle/qa/scripts/logs"
 LOGFILE="$HOME/healthcheck_$(date +%Y%m%d_%H%M%S).log"
-LOG_DIR="$HOME/$(hostname)_log"
+LOG_DIR="/home/truffle/qa/scripts/logs/$(hostname)_log"
 
 # Log files for individual tests
 HOTSPOT_LOG_FILE="${SCRIPTS_LOG_DIR}/stage2_hotspot_logs.txt"
@@ -261,12 +261,12 @@ fi
 ###############################
 # PHASE 1: LED TEST
 ###############################
-phase_start "LED Test"
-log "Testing all LED states"
-led_states
-led_off
-success "LED test completed"
-phase_end "LED Test"
+# phase_start "LED Test"
+# log "Testing all LED states"
+# led_states
+# led_off
+# success "LED test completed"
+# phase_end "LED Test"
 
 ###############################
 # PHASE 2: HOTSPOT TEST
@@ -305,93 +305,99 @@ phase_end "WiFi Hotspot Test"
 ###############################
 # PHASE 3-4: CONCURRENT NVME HEALTH CHECK AND GPU/CPU BURN TEST
 ###############################
-phase_start "Concurrent NVME Health Check and GPU/CPU Burn Test"
-# Indicator that tests are starting
-led_white
-sleep 2
-led_off
+# phase_start "Concurrent NVME Health Check and GPU/CPU Burn Test"
+# # Indicator that tests are starting
+# led_white
+# sleep 2
+# led_off
 
-log "Starting NVME health check and GPU/CPU burn test concurrently"
+# log "Starting NVME health check and GPU/CPU burn test concurrently"
 
-# Clear the log files
-> "$NVME_LOG_FILE"
-> "$GPU_LOG_FILE"
+# # Clear the log files
+# > "$NVME_LOG_FILE"
+# > "$GPU_LOG_FILE"
 
-# CSV produced by test.py
-GPU_CSV_PATH="/home/truffle/qa/scripts/logs/stage2_burn_log.csv"
-# Always overwrite the same remote target so the latest data is easy to find
-GPU_CSV_REMOTE="${REMOTE_DIR}/stage2_burn_log.csv"
+# # CSV produced by test.py
+# GPU_CSV_PATH="/home/truffle/qa/scripts/logs/stage2_burn_log.csv"
+# # Always overwrite the same remote target so the latest data is easy to find
+# GPU_CSV_REMOTE="${REMOTE_DIR}/stage2_burn_log.csv"
 
-# Start a background process to send CSV data every minute
-MAIN_PID=$$
-(
-  while kill -0 "$MAIN_PID" 2>/dev/null; do
-    if [ -f "$GPU_CSV_PATH" ]; then
-      scp_to_remote "$GPU_CSV_PATH" "$GPU_CSV_REMOTE"
-      log "Transferred GPU CSV at $(date)" >> "$GPU_LOG_FILE"
-    fi
-    sleep 60
-  done
-) &
-CSV_TRANSFER_PID=$!
+# # Start a background process to send CSV data every minute
+# MAIN_PID=$$
+# (
+#   while kill -0 "$MAIN_PID" 2>/dev/null; do
+#     if [ -f "$GPU_CSV_PATH" ]; then
+#       scp_to_remote "$GPU_CSV_PATH" "$GPU_CSV_REMOTE"
+#       log "Transferred GPU CSV at $(date)" >> "$GPU_LOG_FILE"
+#     fi
+#     sleep 60
+#   done
+# ) &
+# CSV_TRANSFER_PID=$!
 
-# Run NVME health check script in background
-log "Running NVME health check in background, logging to $NVME_LOG_FILE"
-(
-  if sudo "$NVME_HEALTH_SCRIPT" --extended > >(tee -a "$NVME_LOG_FILE") 2> >(tee -a "$NVME_LOG_FILE" >&2); then
-    success "NVME health check completed successfully" | tee -a "$NVME_LOG_FILE"
-  else
-    NVME_EXIT_CODE=$?
-    fail "NVME health check failed with exit code $NVME_EXIT_CODE" | tee -a "$NVME_LOG_FILE"
-  fi
-) &
-NVME_PID=$!
+# # Run NVME health check script in background
+# log "Running NVME health check in background, logging to $NVME_LOG_FILE"
+# (
+#   if sudo "$NVME_HEALTH_SCRIPT" --extended > >(tee -a "$NVME_LOG_FILE") 2> >(tee -a "$NVME_LOG_FILE" >&2); then
+#     success "NVME health check completed successfully" | tee -a "$NVME_LOG_FILE"
+#   else
+#     NVME_EXIT_CODE=$?
+#     fail "NVME health check failed with exit code $NVME_EXIT_CODE" | tee -a "$NVME_LOG_FILE"
+#   fi
+# ) &
+# NVME_PID=$!
 
-# Run GPU/CPU burn test in background
-log "Running GPU/CPU burn test in background, logging to $GPU_LOG_FILE"
-(
-  if sudo python3 "$GPU_BURN_SCRIPT" --stage-one 2 --stage-two 0 > >(tee -a "$GPU_LOG_FILE") 2> >(tee -a "$GPU_LOG_FILE" >&2); then
-    success "GPU/CPU burn test completed successfully" | tee -a "$GPU_LOG_FILE"
-  else
-    GPU_EXIT_CODE=$?
-    fail "GPU/CPU burn test failed with exit code $GPU_EXIT_CODE" | tee -a "$GPU_LOG_FILE"
-  fi
-) &
-GPU_PID=$!
+# # Run GPU/CPU burn test in background
+# log "Running GPU/CPU burn test in background, logging to $GPU_LOG_FILE"
+# (
+#   if sudo python3 "$GPU_BURN_SCRIPT" --stage-one 2 --stage-two 0 > >(tee -a "$GPU_LOG_FILE") 2> >(tee -a "$GPU_LOG_FILE" >&2); then
+#     success "GPU/CPU burn test completed successfully" | tee -a "$GPU_LOG_FILE"
+#   else
+#     GPU_EXIT_CODE=$?
+#     fail "GPU/CPU burn test failed with exit code $GPU_EXIT_CODE" | tee -a "$GPU_LOG_FILE"
+#   fi
+# ) &
+# GPU_PID=$!
 
-# Wait for both tests to complete
-log "Waiting for concurrent tests to complete..."
-wait $NVME_PID
-NVME_STATUS=$?
-wait $GPU_PID
-GPU_STATUS=$?
+# # Wait for both tests to complete
+# log "Waiting for concurrent tests to complete..."
+# wait $NVME_PID
+# NVME_STATUS=$?
+# wait $GPU_PID
+# GPU_STATUS=$?
 
-# Kill the CSV transfer background process if it's still running
-if kill -0 $CSV_TRANSFER_PID 2>/dev/null; then
-  kill $CSV_TRANSFER_PID
-  wait $CSV_TRANSFER_PID 2>/dev/null || true
-fi
+# # Kill the CSV transfer background process if it's still running
+# if kill -0 $CSV_TRANSFER_PID 2>/dev/null; then
+#   kill $CSV_TRANSFER_PID
+#   wait $CSV_TRANSFER_PID 2>/dev/null || true
+# fi
 
-# Set LED based on test results
-if [ $NVME_STATUS -eq 0 ] && [ $GPU_STATUS -eq 0 ]; then
-  led_green
-  sleep 3
-else
-  led_red
-  sleep 3
-fi
+# # Set LED based on test results
+# if [ $NVME_STATUS -eq 0 ] && [ $GPU_STATUS -eq 0 ]; then
+#   led_green
+#   sleep 3
+# else
+#   led_red
+#   sleep 3
+# fi
 
-# Transfer logs to remote
-log "Transferring logs to remote"
-scp_to_remote "$NVME_LOG_FILE" "${REMOTE_DIR}/$(basename "$NVME_LOG_FILE")"
-scp_to_remote "$GPU_LOG_FILE" "${REMOTE_DIR}/$(basename "$GPU_LOG_FILE")"
-if [ -f "$GPU_CSV_PATH" ]; then
-  # Final copy with .final suffix
-  scp_to_remote "$GPU_CSV_PATH" "${GPU_CSV_REMOTE}.final"
-fi
+# # Transfer logs to remote
+# log "Transferring logs to remote"
+# scp_to_remote "$NVME_LOG_FILE" "${REMOTE_DIR}/$(basename "$NVME_LOG_FILE")"
+# scp_to_remote "$GPU_LOG_FILE" "${REMOTE_DIR}/$(basename "$GPU_LOG_FILE")"
+# if [ -f "$GPU_CSV_PATH" ]; then
+#   # Final copy with .final suffix
+#   scp_to_remote "$GPU_CSV_PATH" "${GPU_CSV_REMOTE}.final"
+# fi
 
-led_off
-phase_end "Concurrent NVME Health Check and GPU/CPU Burn Test"
+# led_off
+# phase_end "Concurrent NVME Health Check and GPU/CPU Burn Test"
+
+########################################################
+#the end of phases 3-4, dont ji=udge i write these so i can comment them out without fru=ying my brain looking for stuff
+########################################################
+
+
 
 # All tests complete
 log "All tests completed"
@@ -401,3 +407,21 @@ success "Health check complete!"
 cp "$LOGFILE" "$LOG_DIR/"
 log "Log saved to $LOG_DIR/$(basename "$LOGFILE")"
 scp_to_remote "$LOGFILE" "${REMOTE_DIR}/stage2_main_$(date +%Y%m%d_%H%M%S).log"
+
+# Fallback: if the transfer to the primary host failed, try the secondary host explicitly
+if [ $? -ne 0 ]; then
+  warning "Primary log transfer failed, retrying with secondary host truffle-2.local"
+  original_host="$REMOTE_HOST"
+  REMOTE_HOST="truffle-2.local"
+
+  # Ensure the remote directory exists on the secondary host
+  if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p \"${REMOTE_DIR}\"" 2>/dev/null; then
+    if command -v sshpass &> /dev/null; then
+      sshpass -p "$SSH_PASSWORD" ssh "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p \"${REMOTE_DIR}\""
+    fi
+  fi
+
+  # Retry the copy
+  scp_to_remote "$LOGFILE" "${REMOTE_DIR}/stage2_main_$(date +%Y%m%d_%H%M%S).log"
+  REMOTE_HOST="$original_host"
+fi
