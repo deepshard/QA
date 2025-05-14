@@ -56,21 +56,21 @@ else
   log "gdisk is already installed"
 fi
 
-# Install SSH and Avahi
-if ! systemctl is-active --quiet ssh || ! systemctl is-active --quiet avahi-daemon; then
-  log "Installing and configuring SSH and Avahi..."
-  apt-get update && apt-get install -y openssh-server avahi-daemon
-  systemctl enable --now ssh avahi-daemon
+# # Install SSH and Avahi
+# if ! systemctl is-active --quiet ssh || ! systemctl is-active --quiet avahi-daemon; then
+#   log "Installing and configuring SSH and Avahi..."
+#   apt-get update && apt-get install -y openssh-server avahi-daemon
+#   systemctl enable --now ssh avahi-daemon
   
-  # Verify services are running
-  if systemctl is-active --quiet ssh && systemctl is-active --quiet avahi-daemon; then
-    verify "SSH and Avahi services are running"
-  else
-    log "❌ Failed to start SSH or Avahi services"
-  fi
-else
-  log "SSH and Avahi are already installed and running"
-fi
+#   # Verify services are running
+#   if systemctl is-active --quiet ssh && systemctl is-active --quiet avahi-daemon; then
+#     verify "SSH and Avahi services are running"
+#   else
+#     log "❌ Failed to start SSH or Avahi services"
+#   fi
+# else
+#   log "SSH and Avahi are already installed and running"
+# fi
 
 ########################################
 # PHASE 2: Hostname Setup
@@ -340,6 +340,24 @@ if python3 -c "import jtop" &> /dev/null; then
   verify "jtop package installation successful"
 else
   log "❌ Failed to install jtop package"
+fi
+
+# Install stress tool for stress testing
+if ! command -v stress &> /dev/null; then
+  log "Installing stress..."
+  apt-get update && apt-get install -y stress
+  verify "stress installation"
+else
+  log "stress is already installed"
+fi
+
+# Install screen utility (for detachable terminal sessions)
+if ! command -v screen &> /dev/null; then
+  log "Installing screen..."
+  apt-get update && apt-get install -y screen
+  verify "screen installation"
+else
+  log "screen is already installed"
 fi
 
 ########################################

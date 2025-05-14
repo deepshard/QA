@@ -350,7 +350,7 @@ NVME_PID=$!
 # Run GPU/CPU burn test in background
 log "Running GPU/CPU burn test in background, logging to $GPU_LOG_FILE"
 (
-  if sudo python3 "$GPU_BURN_SCRIPT" --stage-one 0.1 --stage-two 0.1 > >(tee -a "$GPU_LOG_FILE") 2> >(tee -a "$GPU_LOG_FILE" >&2); then
+  if sudo python3 "$GPU_BURN_SCRIPT" --stage-one 2 --stage-two 0 > >(tee -a "$GPU_LOG_FILE") 2> >(tee -a "$GPU_LOG_FILE" >&2); then
     success "GPU/CPU burn test completed successfully" | tee -a "$GPU_LOG_FILE"
   else
     GPU_EXIT_CODE=$?

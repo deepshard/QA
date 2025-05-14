@@ -4,7 +4,10 @@ set -euo pipefail
 
 # Set the Linux PC hostname
 PC_USER="truffle"
-PC_HOST="truffle.local"
+# List of potential Linux PC hostnames (primary followed by fallback)
+PC_HOSTS=("truffle.local" "truffle-2.local")
+# Will hold the first reachable host
+PC_HOST=""
 REMOTE_SCRIPT="/home/truffle/abd_work/hotspot_connect.sh"
 TMP_REMOTE="/home/truffle/abd_work/tmp.txt"
 SSH_KEY="$HOME/.ssh/id_hotspot"
@@ -16,22 +19,27 @@ HOTSPOT_PSK="runescape"
 DURATION=30  # seconds to keep hotspot active
 
 # 1) Notify the Linux PC about the hotspot SSID
-# First, test if we can reach the PC
-if ping -c 1 -W 2 "$PC_HOST" &> /dev/null; then
-    echo "→ Successfully reached Linux PC at $PC_HOST"
-    
+# Try each candidate hostname until one responds
+for host in "${PC_HOSTS[@]}"; do
+    if ping -c 1 -W 2 "$host" &> /dev/null; then
+        PC_HOST="$host"
+        echo "→ Successfully reached Linux PC at $PC_HOST"
+        break
+    fi
+done
+
+if [[ -n "$PC_HOST" ]]; then
     # Attempt to SSH and set up the Linux PC
     ssh -i "$SSH_KEY" -o ConnectTimeout=5 ${PC_USER}@${PC_HOST} "mkdir -p /home/truffle/abd_work && echo $HOST_SSID > $TMP_REMOTE"
-    
-    # Start the hotspot-connect routine on the PC in background with nohup
-    # This ensures it continues running even after SSH disconnects
+
+    # Start the hotspot-connect routine on the PC in background with nohup so it persists
     ssh -i "$SSH_KEY" ${PC_USER}@${PC_HOST} "nohup sudo $REMOTE_SCRIPT > /home/truffle/abd_work/hotspot_nohup.out 2>&1 &"
-    
+
     # Give the Linux PC script a moment to start
     echo "→ Waiting 5 seconds for Linux PC script to initialize..."
     sleep 5
 else
-    echo "⚠️ Cannot reach Linux PC. Will still create hotspot but PC connection may fail."
+    echo "⚠️ Cannot reach Linux PC (${PC_HOSTS[*]}). Will still create hotspot but PC connection may fail."
 fi
 
 # 2) Identify the Wi-Fi interface
@@ -99,7 +107,7 @@ else
 fi
 
 # 10) Try to reconnect to the Linux PC to check results
-if ping -c 1 -W 2 "$PC_HOST" &> /dev/null; then
+if [[ -n "$PC_HOST" ]] && ping -c 1 -W 2 "$PC_HOST" &> /dev/null; then
     echo "→ Reconnected to Linux PC, sanity check..."
 else
     echo "⚠️ Could not reconnect to Linux PC to check results."
