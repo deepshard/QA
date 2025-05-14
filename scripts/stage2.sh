@@ -303,51 +303,18 @@ led_off
 phase_end "WiFi Hotspot Test"
 
 ###############################
-# PHASE 3: NVME HEALTH CHECK
+# PHASE 3-4: CONCURRENT NVME HEALTH CHECK AND GPU/CPU BURN TEST
 ###############################
-phase_start "NVME Health Check"
-# Indicator that NVME test is starting
+phase_start "Concurrent NVME Health Check and GPU/CPU Burn Test"
+# Indicator that tests are starting
 led_white
 sleep 2
 led_off
 
-log "Starting NVME health check"
+log "Starting NVME health check and GPU/CPU burn test concurrently"
 
-# Clear the NVME log file
+# Clear the log files
 > "$NVME_LOG_FILE"
-
-# Run NVME health check script, capture all output to test-specific log file
-log "Running NVME health check, logging to $NVME_LOG_FILE"
-if sudo "$NVME_HEALTH_SCRIPT" > >(tee -a "$NVME_LOG_FILE") 2> >(tee -a "$NVME_LOG_FILE" >&2); then
-  success "NVME health check completed successfully" | tee -a "$NVME_LOG_FILE"
-  led_green
-  sleep 3
-else
-  NVME_EXIT_CODE=$?
-  fail "NVME health check failed with exit code $NVME_EXIT_CODE" | tee -a "$NVME_LOG_FILE"
-  led_red
-  sleep 3
-fi
-
-# Transfer NVME log to remote
-log "Transferring NVME log to remote"
-scp_to_remote "$NVME_LOG_FILE" "${REMOTE_DIR}/$(basename "$NVME_LOG_FILE")"
-
-led_off
-phase_end "NVME Health Check"
-
-###############################
-# PHASE 4: GPU/CPU BURN TEST
-###############################
-phase_start "GPU/CPU burn"
-# Indicator that GPU test is starting
-led_white
-sleep 2
-led_off
-
-log "Starting GPU/CPU burn test"
-
-# Clear the GPU log file
 > "$GPU_LOG_FILE"
 
 # CSV produced by test.py
@@ -368,30 +335,55 @@ MAIN_PID=$$
 ) &
 CSV_TRANSFER_PID=$!
 
-# Run GPU/CPU burn test, capture all output to test-specific log file
-log "Running GPU/CPU burn test, logging to $GPU_LOG_FILE"
+# Run NVME health check script in background
+log "Running NVME health check in background, logging to $NVME_LOG_FILE"
+(
+  if sudo "$NVME_HEALTH_SCRIPT" --extended > >(tee -a "$NVME_LOG_FILE") 2> >(tee -a "$NVME_LOG_FILE" >&2); then
+    success "NVME health check completed successfully" | tee -a "$NVME_LOG_FILE"
+  else
+    NVME_EXIT_CODE=$?
+    fail "NVME health check failed with exit code $NVME_EXIT_CODE" | tee -a "$NVME_LOG_FILE"
+  fi
+) &
+NVME_PID=$!
 
-# Remove timestamp from the test.py CSV output by modifying the command
-# This ensures we always write to the same filename
-if sudo python3 "$GPU_BURN_SCRIPT" --stage-one 0.1 --stage-two 0.1 > >(tee -a "$GPU_LOG_FILE") 2> >(tee -a "$GPU_LOG_FILE" >&2); then
-  success "GPU/CPU burn test completed successfully" | tee -a "$GPU_LOG_FILE"
-  led_green
-  sleep 3
-else
-  GPU_EXIT_CODE=$?
-  fail "GPU/CPU burn test failed with exit code $GPU_EXIT_CODE" | tee -a "$GPU_LOG_FILE"
-  led_red
-  sleep 3
-fi
+# Run GPU/CPU burn test in background
+log "Running GPU/CPU burn test in background, logging to $GPU_LOG_FILE"
+(
+  if sudo python3 "$GPU_BURN_SCRIPT" --stage-one 0.1 --stage-two 0.1 > >(tee -a "$GPU_LOG_FILE") 2> >(tee -a "$GPU_LOG_FILE" >&2); then
+    success "GPU/CPU burn test completed successfully" | tee -a "$GPU_LOG_FILE"
+  else
+    GPU_EXIT_CODE=$?
+    fail "GPU/CPU burn test failed with exit code $GPU_EXIT_CODE" | tee -a "$GPU_LOG_FILE"
+  fi
+) &
+GPU_PID=$!
+
+# Wait for both tests to complete
+log "Waiting for concurrent tests to complete..."
+wait $NVME_PID
+NVME_STATUS=$?
+wait $GPU_PID
+GPU_STATUS=$?
 
 # Kill the CSV transfer background process if it's still running
 if kill -0 $CSV_TRANSFER_PID 2>/dev/null; then
   kill $CSV_TRANSFER_PID
   wait $CSV_TRANSFER_PID 2>/dev/null || true
 fi
-led_off
-# Final transfer of GPU log and CSV
-log "Transferring final GPU log and data to remote"
+
+# Set LED based on test results
+if [ $NVME_STATUS -eq 0 ] && [ $GPU_STATUS -eq 0 ]; then
+  led_green
+  sleep 3
+else
+  led_red
+  sleep 3
+fi
+
+# Transfer logs to remote
+log "Transferring logs to remote"
+scp_to_remote "$NVME_LOG_FILE" "${REMOTE_DIR}/$(basename "$NVME_LOG_FILE")"
 scp_to_remote "$GPU_LOG_FILE" "${REMOTE_DIR}/$(basename "$GPU_LOG_FILE")"
 if [ -f "$GPU_CSV_PATH" ]; then
   # Final copy with .final suffix
@@ -399,7 +391,7 @@ if [ -f "$GPU_CSV_PATH" ]; then
 fi
 
 led_off
-phase_end "GPU/CPU burn"
+phase_end "Concurrent NVME Health Check and GPU/CPU Burn Test"
 
 # All tests complete
 log "All tests completed"

@@ -16,6 +16,56 @@ LED_PID=""
 # Set absolute paths for log files
 LOG_FILE="$(pwd)/logs/stage1_log.txt"
 
+# =====================================================
+# Remote transfer configuration
+# =====================================================
+REMOTE_USER="truffle"
+REMOTE_HOSTS=("truffle.local" "truffle-2.local")
+SSH_PASSWORD="runescape"
+REMOTE_BASE_DIR="/home/truffle/abd_work/truffle_QA"
+HOSTNAME=$(hostname)
+REMOTE_DIR="${REMOTE_BASE_DIR}/${HOSTNAME}"
+REMOTE_HOST=""
+
+# Utility to transfer files with host/auth fallback (borrowed from stage2)
+scp_to_remote() {
+  local source_file="$1"
+  local dest_file="$2"
+  local -a tried_hosts=()
+  local host_list=("$REMOTE_HOST" "${REMOTE_HOSTS[@]}")
+
+  for host in "${host_list[@]}"; do
+    [ -z "$host" ] && continue
+    if [[ " ${tried_hosts[*]} " =~ " $host " ]]; then
+      continue
+    fi
+    tried_hosts+=("$host")
+
+    log "Transferring $source_file to ${REMOTE_USER}@${host}:${dest_file}"
+    if scp -o BatchMode=yes -o ConnectTimeout=5 "$source_file" "${REMOTE_USER}@${host}:${dest_file}" 2>/dev/null; then
+      success "File transferred successfully to ${host} using SSH key"
+      REMOTE_HOST="$host"
+      return 0
+    else
+      log "SSH key transfer to ${host} failed, trying with password..."
+      if ! command -v sshpass &> /dev/null; then
+        log "Installing sshpass..."
+        sudo apt-get update -y && sudo apt-get install -y sshpass
+      fi
+      if command -v sshpass &> /dev/null && sshpass -p "$SSH_PASSWORD" scp "$source_file" "${REMOTE_USER}@${host}:${dest_file}"; then
+        success "File transferred successfully to ${host} using password"
+        REMOTE_HOST="$host"
+        return 0
+      fi
+    fi
+  done
+  fail "Failed to transfer file $source_file to all hosts (${REMOTE_HOSTS[*]})"
+  return 1
+}
+
+# Initialize log file placeholder (actual first log entry occurs after functions are defined)
+# The remote directory creation will be attempted later, once all helper functions are available.
+
 # Clear any existing log file
 > "$LOG_FILE"
 
@@ -45,6 +95,9 @@ success() {
 fail() {
   log "❌ ERROR: $*"
 }
+
+# Write the first log entry now that logging helpers exist
+log "Stage 1 script started"
 
 # LED control functions
 led_stop() {
@@ -98,9 +151,6 @@ led_off() {
 
 # Ensure LEDs are off when script exits
 trap led_off EXIT
-
-# Initialize log file
-log "Stage 1 script started"
 
 # PHASE: VERIFY STAGE 0 CHANGES
 ###############################
@@ -214,8 +264,6 @@ led_off
 success "LED test completed"
 phase_end "LED Test"
 
-
-
 # Copy stage1 log - Do this last to ensure complete logs
 log "Completing stage1 log for transfer"
 phase_end "Log Transfer"
@@ -223,12 +271,37 @@ phase_end "Log Transfer"
 # Final copy of stage1 log
 log "Stage 1 check completed successfully"
 
+# Remote directory creation (helper functions are now available)
+for host in "${REMOTE_HOSTS[@]}"; do
+  log "Attempting to create remote directory on host: ${host}"
+  if ssh -o BatchMode=yes -o ConnectTimeout=5 "${REMOTE_USER}@${host}" "mkdir -p \"${REMOTE_DIR}\"" 2>/dev/null; then
+    success "Remote directory created on ${host} using SSH key"
+    REMOTE_HOST="$host"
+    break
+  else
+    log "SSH key authentication to ${host} failed, trying with password..."
+    if ! command -v sshpass &> /dev/null; then
+      log "Installing sshpass..."
+      sudo apt-get update -y && sudo apt-get install -y sshpass
+    fi
+    if command -v sshpass &> /dev/null && sshpass -p "$SSH_PASSWORD" ssh "${REMOTE_USER}@${host}" "mkdir -p \"${REMOTE_DIR}\""; then
+      success "Remote directory created on ${host} using password"
+      REMOTE_HOST="$host"
+      break
+    fi
+  fi
+done
+
+if [ -z "$REMOTE_HOST" ]; then
+  log "⚠️  Failed to create remote directory on any host – log transfer may fail"
+fi
+
 # This will be executed after the script completes
 # We're using trap to ensure LED's are off
 # Added for the final transfer of stage1_log.txt after all logging is complete
 (
   sleep 1
-  scp "$LOG_FILE" "${TARGET_USER}@${TARGET_IP}:${TARGET_DIR}/stage1_log.txt" 2>/dev/null
+  scp_to_remote "$LOG_FILE" "${REMOTE_DIR}/stage1_log.txt"
   # Clean up log files after transfer
   if [ $? -eq 0 ]; then
     echo "Log files transferred and cleaned up"

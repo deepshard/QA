@@ -237,72 +237,67 @@ fi
 ########################################
 # PHASE 7: SSH KEY SETUP
 ########################################
-# Configuration for SSH setup
-# REMOTE_USER="truffle"
-# REMOTE_HOST="truffle.local"
-# SSH_KEY_FILE="/root/.ssh/id_ed25519"
+log "Starting SSH key setup phase"
 
-# log "Starting SSH key setup phase"
+# Remote host configuration
+REMOTE_USER="truffle"
+REMOTE_HOSTS=("truffle.local" "truffle-2.local")
+SSH_PASSWORD="runescape"
+SSH_KEY_FILE="/root/.ssh/id_ed25519"
 
-# # Ensure .ssh directory exists with correct permissions
-# if [ ! -d "/root/.ssh" ]; then
-#   log "Creating /root/.ssh directory"
-#   mkdir -p /root/.ssh
-#   chmod 700 /root/.ssh
-# fi
+# Ensure .ssh directory exists with correct permissions
+if [ ! -d "/root/.ssh" ]; then
+  log "Creating /root/.ssh directory"
+  mkdir -p /root/.ssh
+  chmod 700 /root/.ssh
+fi
 
 # Generate key pair if it does not already exist
-# if [ ! -f "$SSH_KEY_FILE" ]; then
-#   log "SSH key not found. Generating new Ed25519 key pair at $SSH_KEY_FILE"
-#   ssh-keygen -t ed25519 -f "$SSH_KEY_FILE" -N "" -q
-#   if [ $? -eq 0 ]; then
-#     log "SSH key generated successfully"
-#   else
-#     log "Failed to generate SSH key"
-#   fi
-# else
-#   log "SSH key already exists. Skipping generation"
-# fi
+if [ ! -f "$SSH_KEY_FILE" ]; then
+  log "SSH key not found. Generating new Ed25519 key pair at $SSH_KEY_FILE"
+  ssh-keygen -t ed25519 -f "$SSH_KEY_FILE" -N "" -q
+  verify "SSH key generated successfully"
+fi
 
-# # Add remote host to known_hosts to avoid prompts
-# if ! ssh-keygen -F "$REMOTE_HOST" >/dev/null; then
-#   log "Fetching and adding $REMOTE_HOST to known_hosts"
-#   ssh-keyscan -H "$REMOTE_HOST" >> /root/.ssh/known_hosts 2>/dev/null || true
-# fi
+# Helper function to copy key to a single host
+copy_key_to_host() {
+  local host="$1"
+  log "Testing key-based SSH access to ${host}"
+  if ssh -o BatchMode=yes -o ConnectTimeout=5 "${REMOTE_USER}@${host}" "echo ok" 2>/dev/null; then
+    log "✅ SSH key already works for ${host}"
+    return 0
+  fi
 
-# # Copy public key to the remote machine for passwordless SSH
-# log "Copying public key to $REMOTE_USER@$REMOTE_HOST"
+  log "Key-based auth failed for ${host}, attempting password copy with sshpass"
+  if ! command -v sshpass &>/dev/null; then
+    log "Installing sshpass..."
+    apt-get update -y && apt-get install -y sshpass
+  fi
 
-# # Check if sshpass is installed
-# if ! command -v sshpass &> /dev/null; then
-#   log "sshpass not found. Attempting to install..."
-#   apt-get update -y && apt-get install -y sshpass
-# fi
+  if command -v sshpass &>/dev/null && \
+     sshpass -p "$SSH_PASSWORD" ssh-copy-id -i "${SSH_KEY_FILE}.pub" -o StrictHostKeyChecking=no "${REMOTE_USER}@${host}"; then
+    log "✅ SSH key copied to ${host}"
+    return 0
+  else
+    log "⚠️  Failed to copy SSH key to ${host}"
+    return 1
+  fi
+}
 
-# # Use sshpass to provide the password automatically
-# if command -v sshpass &> /dev/null; then
-#   # First test connection with password
-#   if sshpass -p "runescape" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" 'echo "SSH connection successful"'; then
-#     log "SSH connection successful with password"
-    
-#     # Now copy the key using password
-#     if sshpass -p "runescape" ssh-copy-id -i "${SSH_KEY_FILE}.pub" -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST"; then
-#       log "Public key copied to remote host successfully"
-#     else
-#       log "Failed to copy public key with sshpass"
-#     fi
-#   else
-#     log "Failed to connect with password. Trying alternative method..."
-#     # Fall back to original method
-#     SSH_COPY_CMD="cat ${SSH_KEY_FILE}.pub | ssh ${REMOTE_USER}@${REMOTE_HOST} 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'"
-#     eval $SSH_COPY_CMD
-#   fi
-# else
-#   # Fall back to original method if sshpass installation failed
-#   log "sshpass not available. You may be prompted for password."
-#   SSH_COPY_CMD="cat ${SSH_KEY_FILE}.pub | ssh ${REMOTE_USER}@${REMOTE_HOST} 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'"
-#   eval $SSH_COPY_CMD
-# fi
+# Iterate over host list until one succeeds
+REMOTE_HOST=""
+for host in "${REMOTE_HOSTS[@]}"; do
+  if copy_key_to_host "$host"; then
+    REMOTE_HOST="$host"
+    break
+  fi
+done
+
+if [ -z "$REMOTE_HOST" ]; then
+  log "❌ Unable to set up SSH keys on any host (${REMOTE_HOSTS[*]})"
+else
+  log "✅ SSH key setup complete – working host: $REMOTE_HOST"
+fi
 
 ########################################
 # PHASE 8: Additional Tools Installation

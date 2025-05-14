@@ -46,9 +46,9 @@ benchmark_processes = None
 
 # Define commands for stress tools
 gpu_stress_command = ["/home/truffle/qa/THERMALTEST/gpu_burn", "-m", "85%", str(TOTAL_DURATION + 60)]
-cpu_stress_command = ["/usr/bin/stress", "-c", "8", "-t", str(TOTAL_DURATION + 60)]
-led_stress_command = ["/home/truffle/led_renderer_og/led_white"]
-led_off_command = ["sudo", "/home/truffle/led_renderer_og/ledoff"]
+cpu_stress_command = ["/usr/bin/stress", "-c", "3", "-t", str(TOTAL_DURATION + 60)]
+led_stress_command = ["/home/truffle/qa/led_test/led_white"]
+led_off_command = ["sudo", "/home/truffle/qa/led_test/ledoff"]
 
 def _start(cmd):
     # Each tool gets its own process-group so we can kill children cleanly
@@ -73,7 +73,7 @@ def turn_off_leds():
     except subprocess.CalledProcessError as e:
         print(f"Failed to turn off LEDs: {e}")
     except FileNotFoundError:
-        print("LED off command not found. Make sure /home/truffle/led_renderer_og/ledoff exists")
+        print("LED off command not found. Make sure /home/truffle/qa/led_test/ledoff exists")
 
 def stop_benchmark():
     global benchmark_processes
