@@ -14,7 +14,7 @@ LED_OFF="/home/truffle/qa/led_test/ledoff"
 LED_PID=""
 
 # Set absolute paths for log files
-LOG_FILE="$(pwd)/logs/stage1_log.txt"
+LOG_FILE="/home/truffle/qa/scripts/logs/stage1_log.txt"
 
 # =====================================================
 # Remote transfer configuration
