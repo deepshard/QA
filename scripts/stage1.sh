@@ -34,7 +34,7 @@ LOG_FILE="/home/truffle/qa/scripts/logs/stage1_log.txt"
 # Remote transfer configuration
 # =====================================================
 REMOTE_USER="truffle"
-REMOTE_HOSTS=("truffle.local" "truffle-2.local")
+REMOTE_HOSTS=("abd.local" "truffle-2.local")
 #SSH_PASSWORD="runescape"
 SSH_PASSWORD="2002"
 #REMOTE_BASE_DIR="/home/truffle/abd_work/truffle_QA"

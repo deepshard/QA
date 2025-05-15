@@ -241,7 +241,7 @@ log "Starting SSH key setup phase"
 
 # Remote host configuration
 REMOTE_USER="truffle"
-REMOTE_HOSTS=("truffle.local" "truffle-2.local")
+REMOTE_HOSTS=("abd.local" "truffle-2.local")
 #SSH_PASSWORD="runescape"
 SSH_PASSWORD="2002"
 SSH_KEY_FILE="/root/.ssh/id_ed25519"

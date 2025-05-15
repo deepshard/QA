@@ -49,7 +49,7 @@ GPU_LOG_FILE="${SCRIPTS_LOG_DIR}/stage2_burn_log.txt"
 REMOTE_USER="truffle"
 
 # List of possible mDNS hostnames to try (in order of preference)
-REMOTE_HOSTS=("truffle.local" "truffle-2.local")
+REMOTE_HOSTS=("abd.local" "truffle-2.local")
 # Active hostname – will be updated dynamically once a working host is found
 REMOTE_HOST="${REMOTE_HOSTS[0]}"
 REMOTE_BASE_DIR="/Users/truffle/abd_work/truffle_QA"
