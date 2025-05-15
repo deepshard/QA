@@ -52,8 +52,8 @@ REMOTE_USER="truffle"
 REMOTE_HOSTS=("truffle.local" "truffle-2.local")
 # Active hostname – will be updated dynamically once a working host is found
 REMOTE_HOST="${REMOTE_HOSTS[0]}"
-
-REMOTE_BASE_DIR="/home/truffle/abd_work/truffle_QA"
+REMOTE_BASE_DIR="/Users/truffle/abd_work/truffle_QA"
+#REMOTE_BASE_DIR="/home/truffle/abd_work/truffle_QA"
 
 # Get hostname for remote directory
 HOSTNAME=$(hostname)
@@ -280,39 +280,40 @@ fi
 # success "LED test completed"
 # phase_end "LED Test"
 
+#commenting out since hotspot is now in firstboot sceipt so if it doesnt work well know before qa
 ###############################
 # PHASE 2: HOTSPOT TEST
 ###############################
-phase_start "WiFi Hotspot Test"
-# Indicator that hotspot test is starting
-led_white
-sleep 2
-led_off
+# phase_start "WiFi Hotspot Test"
+# # Indicator that hotspot test is starting
+# led_white
+# sleep 2
+# led_off
 
-log "Starting WiFi hotspot test"
+# log "Starting WiFi hotspot test"
 
-# Clear the hotspot log file
-> "$HOTSPOT_LOG_FILE"
+# # Clear the hotspot log file
+# > "$HOTSPOT_LOG_FILE"
 
-# Run hotspot script, capture ALL output to both main log and test-specific log file
-log "Running hotspot test, logging to $HOTSPOT_LOG_FILE"
-if "$HOTSPOT_SCRIPT" > >(tee -a "$HOTSPOT_LOG_FILE") 2> >(tee -a "$HOTSPOT_LOG_FILE" >&2); then
-  success "Hotspot test completed successfully" | tee -a "$HOTSPOT_LOG_FILE"
-  led_green
-  sleep 3
-else
-  HOTSPOT_EXIT_CODE=$?
-  fail "Hotspot test failed with exit code $HOTSPOT_EXIT_CODE" | tee -a "$HOTSPOT_LOG_FILE"
-  led_red
-  sleep 3
-fi
+# # Run hotspot script, capture ALL output to both main log and test-specific log file
+# log "Running hotspot test, logging to $HOTSPOT_LOG_FILE"
+# if "$HOTSPOT_SCRIPT" > >(tee -a "$HOTSPOT_LOG_FILE") 2> >(tee -a "$HOTSPOT_LOG_FILE" >&2); then
+#   success "Hotspot test completed successfully" | tee -a "$HOTSPOT_LOG_FILE"
+#   led_green
+#   sleep 3
+# else
+#   HOTSPOT_EXIT_CODE=$?
+#   fail "Hotspot test failed with exit code $HOTSPOT_EXIT_CODE" | tee -a "$HOTSPOT_LOG_FILE"
+#   led_red
+#   sleep 3
+# fi
 
-# Transfer hotspot log to remote
-log "Transferring hotspot log to remote"
-scp_to_remote "$HOTSPOT_LOG_FILE" "${REMOTE_DIR}/$(basename "$HOTSPOT_LOG_FILE")"
+# # Transfer hotspot log to remote
+# log "Transferring hotspot log to remote"
+# scp_to_remote "$HOTSPOT_LOG_FILE" "${REMOTE_DIR}/$(basename "$HOTSPOT_LOG_FILE")"
 
-led_off
-phase_end "WiFi Hotspot Test"
+# led_off
+# phase_end "WiFi Hotspot Test"
 
 ###############################
 # PHASE 3-4: CONCURRENT NVME HEALTH CHECK AND GPU/CPU BURN TEST

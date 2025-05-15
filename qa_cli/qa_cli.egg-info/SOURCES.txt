@@ -1,7 +1,7 @@
+README.md
 setup.py
 qa_cli/__init__.py
 qa_cli/cli.py
-qa_cli/stage0_checks.py
 qa_cli.egg-info/PKG-INFO
 qa_cli.egg-info/SOURCES.txt
 qa_cli.egg-info/dependency_links.txt

@@ -6,17 +6,29 @@ import time
 from typing import Optional
 import os
 from pathlib import Path
+import stat
 # Stage-0 checks temporarily disabled – we only need SSH right now.
 
 def validate_truffle_id(ctx, param, value: str) -> str:
-    """Validate the truffle ID format (truffle-XXXX where X is a digit)."""
+    """Validate the truffle identifier.
+
+    Users can now enter just the 4-digit number (e.g. ``0123``), which will be
+    expanded to ``truffle-0123`` internally.  The original full form
+    ``truffle-0123`` is still accepted for backward compatibility.
+    """
+
     if not value:
-        raise click.BadParameter("Truffle ID is required")
-    
-    pattern = r'^truffle-\d{4}$'
-    if not re.match(pattern, value):
-        raise click.BadParameter("Truffle ID must be in format 'truffle-XXXX' where X is a digit")
-    return value
+        raise click.BadParameter("Truffle number is required")
+
+    # Accept plain 4 digits – convert to full ID automatically
+    if re.fullmatch(r"\d{4}", value):
+        return f"truffle-{value}"
+
+    # Also accept the old explicit form
+    if re.fullmatch(r"truffle-\d{4}", value):
+        return value
+
+    raise click.BadParameter("Enter either the 4-digit number (e.g. 0123) or the full 'truffle-0123' ID.")
 
 # def create_truffle_directory(truffle_id: str) -> tuple[bool, str]:
 #     """Create a directory for the truffle if it doesn't exist."""
@@ -151,9 +163,9 @@ def cli():
 @cli.command()
 @click.option(
     '--truffle-id',
-    prompt='Enter the truffle ID (format: truffle-XXXX)',
+    prompt='Enter the 4-digit truffle number (XXXX)',
     callback=validate_truffle_id,
-    help='The ID of the truffle machine to connect to'
+    help='The 4-digit number of the truffle machine to connect to'
 )
 def qa(truffle_id: str):
     """Start the QA process with the specified truffle machine."""
@@ -174,17 +186,31 @@ def qa(truffle_id: str):
 
     # Stage 0
     if click.confirm("Would you like to run stage 0 now?", default=True):
-        click.echo(f"\n🔗 Connecting to {hostname} for stage 0 …")
         cmd_stage0 = "sudo -S -p '' /home/truffle/qa/scripts/stage0.sh"
+
+        # --- First pass (expected to reboot) ---
+        click.echo(f"\n🔗 Connecting to {hostname} for stage 0 (initial run) …")
         ok, _ = run_remote_command(hostname, cmd_stage0, allow_disconnect=True)
 
-        # Stage 0 may reboot the machine; wait for it to come back.
+        # Wait for reboot / SSH to return.
         if not wait_for_ssh(hostname):
             raise click.Abort()
 
+        # The initial Stage 0 run often reboots the machine and may exit with
+        # a non-zero status before the shutdown, which Paramiko captures as a
+        # "failure".  That is expected, so we *do not* abort here.  A proper
+        # success check is done in the optional verification run below.
         if not ok:
-            click.echo(click.style("Stage 0 failed – aborting.", fg="red"))
-            raise click.Abort()
+            click.echo(click.style("⚠️  Stage 0 returned a non-zero exit status on the first run (this can be normal if the machine rebooted).", fg="yellow"))
+
+        # --- Optional verification run ---
+        if click.confirm("Run stage 0 once more to verify?", default=True):
+            click.echo(f"\n🔗 Re-running stage 0 on {hostname} for verification …")
+            ok_verify, _ = run_remote_command(hostname, cmd_stage0)
+
+            if not ok_verify:
+                click.echo(click.style("Stage 0 verification run failed – aborting.", fg="red"))
+                raise click.Abort()
     else:
         click.echo("Exiting …")
         return
@@ -221,6 +247,102 @@ def qa(truffle_id: str):
         click.echo("Stage 2 skipped. Goodbye!")
 
     click.echo(click.style("\n✅ All requested stages completed successfully!", fg="green"))
+
+# ---------------------------------------------------------------------------
+# Log syncing helpers
+# ---------------------------------------------------------------------------
+
+def _sftp_recursive_get(sftp: paramiko.SFTPClient, remote_path: str, local_path: str) -> None:
+    """Recursively download *remote_path* on the remote host into *local_path* locally."""
+    try:
+        # Determine if the remote path is a directory
+        if stat.S_ISDIR(sftp.stat(remote_path).st_mode):
+            os.makedirs(local_path, exist_ok=True)
+            for item in sftp.listdir(remote_path):
+                _sftp_recursive_get(
+                    sftp,
+                    f"{remote_path.rstrip('/')}/{item}",
+                    os.path.join(local_path, item),
+                )
+        else:
+            # It's a file – download and overwrite if it exists locally
+            sftp.get(remote_path, local_path)
+    except IOError as exc:
+        # Ignore files that cannot be accessed, but inform the user
+        click.echo(f"⚠️  Skipping {remote_path}: {exc}")
+
+
+def sync_logs_once(
+    hostname: str,
+    remote_dir: str = "/home/truffle/qa/scripts/logs",
+    local_dir: Path = Path.cwd() / "logs",
+    sudo_password: str = "runescape",
+) -> bool:
+    """Download the entire *remote_dir* from *hostname* into *local_dir*.
+
+    Returns True on success, False otherwise.
+    """
+    try:
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(hostname=hostname, username="truffle", password=sudo_password, timeout=10)
+
+        sftp = client.open_sftp()
+        _sftp_recursive_get(sftp, remote_dir, str(local_dir))
+        sftp.close()
+        client.close()
+        return True
+    except Exception as exc:
+        click.echo(f"❌ Failed to download logs: {exc}")
+        return False
+
+# ---------------------------------------------------------------------------
+# Continuous log sync command
+# ---------------------------------------------------------------------------
+
+@cli.command(name="logs")
+@click.option(
+    '--truffle-id',
+    prompt='Enter the 4-digit truffle number (XXXX)',
+    callback=validate_truffle_id,
+    help='The 4-digit number of the truffle machine to retrieve logs from'
+)
+@click.option(
+    '--interval',
+    default=30,
+    show_default=True,
+    help='Seconds between successive log synchronisations'
+)
+def logs_command(truffle_id: str, interval: int):
+    """Continuously pull QA logs from the remote machine onto the local machine.
+
+    The logs are written to the ./logs directory in the current working directory.
+    Press Ctrl+C to stop the synchronisation.
+    """
+
+    hostname = f"{truffle_id}.local"
+    remote_dir = "/home/truffle/qa/scripts/logs"
+    local_dir = Path.cwd() / "logs"
+
+    click.echo(
+        f"🔄 Beginning log sync from {hostname}:{remote_dir} to {local_dir} every {interval}s.\n"
+        "    Press Ctrl+C to stop."
+    )
+
+    local_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        while True:
+            synced = sync_logs_once(hostname, remote_dir, local_dir)
+            timestamp = time.strftime('%H:%M:%S')
+            if synced:
+                click.echo(f"  ✅ [{timestamp}] Logs synced.")
+            else:
+                click.echo(f"  ⚠️  [{timestamp}] Sync failed – will retry.")
+
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        click.echo("\n🛑 Log sync stopped by user.")
 
 if __name__ == '__main__':
     cli()

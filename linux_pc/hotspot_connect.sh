@@ -16,7 +16,8 @@ fi
 HOTSPOT_SSID=$(<"$TMP_FILE")
 
 # Create the directory for this specific truffle unit
-TRUFFLE_QA_DIR="/home/truffle/abd_work/truffle_QA"
+#TRUFFLE_QA_DIR="/home/truffle/abd_work/truffle_QA"
+TRUFFLE_QA_DIR="/Users/truffle/abd_work/truffle_QA"
 mkdir -p "${TRUFFLE_QA_DIR}/${HOTSPOT_SSID}"
 echo "✅ Created directory: ${TRUFFLE_QA_DIR}/${HOTSPOT_SSID}"
 
