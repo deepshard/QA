@@ -35,7 +35,8 @@ LOG_FILE="/home/truffle/qa/scripts/logs/stage1_log.txt"
 # =====================================================
 REMOTE_USER="truffle"
 REMOTE_HOSTS=("truffle.local" "truffle-2.local")
-SSH_PASSWORD="runescape"
+#SSH_PASSWORD="runescape"
+SSH_PASSWORD="2002"
 #REMOTE_BASE_DIR="/home/truffle/abd_work/truffle_QA"
 REMOTE_BASE_DIR="/Users/truffle/abd_work/truffle_QA"
 HOSTNAME=$(hostname)

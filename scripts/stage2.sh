@@ -33,8 +33,8 @@ HOTSPOT_SCRIPT="/home/truffle/qa/scripts/launch_hotspot.sh"
 HOTSPOT_DURATION=60 # seconds
 
 # SSH Configuration
-SSH_PASSWORD="runescape"
-
+#SSH_PASSWORD="runescape"
+SSH_PASSWORD="2002"
 # Log configuration
 SCRIPTS_LOG_DIR="/home/truffle/qa/scripts/logs"
 LOGFILE="$SCRIPTS_LOG_DIR/healthcheck_$(date +%Y%m%d_%H%M%S).log"
