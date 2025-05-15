@@ -1,5 +1,19 @@
 #!/usr/bin/env bash
 # Stage 1: LED test script with log verification
+
+# Check if we're already in a screen session
+if [ -z "$STY" ]; then
+  # We're not in a screen session, so start one
+  if [ "$EUID" -ne 0 ]; then
+    # We're not root, so use sudo with screen
+    exec sudo screen -S stage1 "$0" "$@"
+  else
+    # We're root, just start screen
+    exec screen -S stage1 "$0" "$@"
+  fi
+  exit 0
+fi
+
 set -euo pipefail
 
 # Create logs directory in /home/truffle/qa/scripts/logs
@@ -165,27 +179,15 @@ else
 fi
 
 # Check if SPI is enabled
-if grep -q "^dtparam=spi=on" /boot/config.txt; then
-  success "SPI is confirmed to be enabled"
+if [[ -e /var/lib/spi-test.done ]]; then
+  if /opt/nvidia/jetson-io/config-by-function.py -l enabled | grep -q spi1; then
+    success "SPI-1 is properly configured and enabled"
+  else
+    fail "SPI-1 is NOT enabled even though marker file exists"
+  fi
 else
-  fail "SPI is not enabled in /boot/config.txt"
+  fail "SPI-1 marker file missing - configuration may be incomplete"
 fi
-#need to test the rootfs flash if APP name duplication happens with custom root size, it doent happen when root size isnt added
-# # Verify EMMC partition label
-# PARTITION_LABEL=$(sgdisk -p /dev/mmcblk0 | grep "APP_EMMC" | awk '{print $7}')
-# if [ "$PARTITION_LABEL" = "APP_EMMC" ]; then
-#   success "EMMC partition is correctly labeled as APP_EMMC"
-# else
-#   fail "EMMC partition is not correctly labeled (Expected: APP_EMMC, Got: $PARTITION_LABEL)"
-# fi
-
-# # Double check with lsblk
-# LSBLK_VERIFY=$(lsblk -o NAME,PARTLABEL /dev/mmcblk0 | grep "APP_EMMC")
-# if [ -n "$LSBLK_VERIFY" ]; then
-#   success "EMMC partition label verified with lsblk"
-# else
-#   fail "EMMC partition label verification with lsblk failed"
-# fi
 
 # Verify hostname format
 HOSTNAME=$(hostname)
