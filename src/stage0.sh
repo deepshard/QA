@@ -65,9 +65,10 @@ nmcli con add type wifi ifname "$WIFI_IF" mode ap \
 # 2b.  Try the client network and wait up to 15 s
 log "→ attempting to join $PRIMARY_SSID (15 s timeout)"
 if nmcli --wait 15 device wifi connect "$PRIMARY_SSID" \
-	         password "$PRIMARY_PSK" ifname "$WIFI_IF" autoconnect yes \
-		          connection.autoconnect-priority 0; then
+	         password "$PRIMARY_PSK" ifname "$WIFI_IF"; then
     log "✓ connected to $PRIMARY_SSID"
+    # Set autoconnect priority after successful connection
+    nmcli con modify "$PRIMARY_SSID" connection.autoconnect-priority 0
 else
 	    log "✗ client Wi-Fi failed – starting hotspot"
 	        nmcli con up "$FALLBACK_NAME"
