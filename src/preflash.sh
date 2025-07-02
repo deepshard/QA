@@ -27,9 +27,9 @@ apt-get install -y \
 systemctl enable --now ssh avahi-daemon
 
 # Install Python packages
-pip3 install -U jetson-stats
+pip3 install -U jetson-stats requests
 
 # Create necessary directories
-mkdir /home/truffle/qa_logs
+mkdir -p /home/truffle/qa_logs
 
 echo "Package installation complete!"
