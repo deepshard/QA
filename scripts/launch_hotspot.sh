@@ -5,7 +5,7 @@ set -euo pipefail
 # Set the Linux PC hostname
 PC_USER="truffle"
 # List of potential Linux PC hostnames (primary followed by fallback)
-PC_HOSTS=("truffle.local" "truffle-2.local")
+PC_HOSTS=("abd.local" "truffle-2.local")
 # Will hold the first reachable host
 PC_HOST=""
 REMOTE_SCRIPT="/home/truffle/abd_work/hotspot_connect.sh"
