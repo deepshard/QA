@@ -1,7 +1,0 @@
-Metadata-Version: 2.4
-Name: qa_cli
-Version: 0.1.0
-Requires-Dist: click>=8.1.7
-Requires-Dist: paramiko>=3.4.0
-Requires-Dist: python-dotenv>=1.0.1
-Dynamic: requires-dist

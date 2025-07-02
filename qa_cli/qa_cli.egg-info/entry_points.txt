@@ -1,2 +1,0 @@
-[console_scripts]
-qa-cli = qa_cli.cli:cli

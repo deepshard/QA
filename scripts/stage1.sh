@@ -30,54 +30,7 @@ LED_PID=""
 # Set absolute paths for log files
 LOG_FILE="/home/truffle/qa/scripts/logs/stage1_log.txt"
 
-# =====================================================
-# Remote transfer configuration
-# =====================================================
-REMOTE_USER="truffle"
-REMOTE_HOSTS=("abd.local" "truffle-2.local")
-#SSH_PASSWORD="runescape"
-SSH_PASSWORD="2002"
-#REMOTE_BASE_DIR="/home/truffle/abd_work/truffle_QA"
-REMOTE_BASE_DIR="/Users/truffle/abd_work/truffle_QA"
-HOSTNAME=$(hostname)
-REMOTE_DIR="${REMOTE_BASE_DIR}/${HOSTNAME}"
-REMOTE_HOST=""
 
-# Utility to transfer files with host/auth fallback (borrowed from stage2)
-scp_to_remote() {
-  local source_file="$1"
-  local dest_file="$2"
-  local -a tried_hosts=()
-  local host_list=("$REMOTE_HOST" "${REMOTE_HOSTS[@]}")
-
-  for host in "${host_list[@]}"; do
-    [ -z "$host" ] && continue
-    if [[ " ${tried_hosts[*]} " =~ " $host " ]]; then
-      continue
-    fi
-    tried_hosts+=("$host")
-
-    log "Transferring $source_file to ${REMOTE_USER}@${host}:${dest_file}"
-    if scp -o BatchMode=yes -o ConnectTimeout=5 "$source_file" "${REMOTE_USER}@${host}:${dest_file}" 2>/dev/null; then
-      success "File transferred successfully to ${host} using SSH key"
-      REMOTE_HOST="$host"
-      return 0
-    else
-      log "SSH key transfer to ${host} failed, trying with password..."
-      if ! command -v sshpass &> /dev/null; then
-        log "Installing sshpass..."
-        sudo apt-get update -y && sudo apt-get install -y sshpass
-      fi
-      if command -v sshpass &> /dev/null && sshpass -p "$SSH_PASSWORD" scp "$source_file" "${REMOTE_USER}@${host}:${dest_file}"; then
-        success "File transferred successfully to ${host} using password"
-        REMOTE_HOST="$host"
-        return 0
-      fi
-    fi
-  done
-  fail "Failed to transfer file $source_file to all hosts (${REMOTE_HOSTS[*]})"
-  return 1
-}
 
 # Initialize log file placeholder (actual first log entry occurs after functions are defined)
 # The remote directory creation will be attempted later, once all helper functions are available.
