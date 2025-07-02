@@ -3,6 +3,8 @@
 import os
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 from datetime import datetime
 
@@ -74,6 +76,37 @@ def run_script_with_logging(script_path, log_filename, script_args=None, script_
         print(f"❌ Error running {script_path}: {e}")
         return False
 
+def run_parallel_tests(test_configs):
+    """Run multiple tests in parallel and return results"""
+    threads = []
+    results = {}
+    
+    def run_test_thread(config):
+        name = config['name']
+        script_path = config['script_path']
+        log_filename = config['log_filename']
+        script_args = config.get('script_args', None)
+        script_type = config.get('script_type', 'bash')
+        
+        print(f"Starting {name} in parallel...")
+        success = run_script_with_logging(script_path, log_filename, script_args, script_type)
+        results[name] = success
+        status = "✅ completed" if success else "❌ failed"
+        print(f"{name} {status}")
+    
+    # Start all tests in parallel
+    for config in test_configs:
+        thread = threading.Thread(target=run_test_thread, args=(config,))
+        thread.start()
+        threads.append(thread)
+        time.sleep(2)  # Small delay between starts
+    
+    # Wait for all tests to complete
+    for thread in threads:
+        thread.join()
+    
+    return results
+
 def main():
     print("=== QA Test Suite Starting ===")
     
@@ -103,14 +136,59 @@ def main():
         print("❌ NVME test failed, stopping test suite")
         sys.exit(1)
     
-    # Stage 3: GPU Burn Test
-    print("\n--- Stage 3: GPU Burn Test ---")
+    # Stage 3: Hotspot Test
+    print("\n--- Stage 3: Hotspot Test ---")
+    success = run_script_with_logging("src/hotspot_test.sh", "hotspot_test.txt")
+    
+    if not success:
+        print("❌ Hotspot test failed, stopping test suite")
+        sys.exit(1)
+    
+    # Stage 4: GPU Burn Test
+    print("\n--- Stage 4: GPU Burn Test ---")
     burn_args = ["--stage-one", "2", "--stage-two", "2"]
     success = run_script_with_logging("src/burn_test.sh", "burn_test.txt", burn_args, "python")
     
     if not success:
         print("❌ GPU burn test failed, stopping test suite")
         sys.exit(1)
+    
+    # Stage 5: Parallel Stress Test (GPU + NVME + Hotspot)
+    print("\n--- Stage 5: Parallel Stress Test ---")
+    print("Running GPU burn test, NVME test, and hotspot test simultaneously...")
+    
+    parallel_configs = [
+        {
+            'name': 'GPU Burn Test',
+            'script_path': 'src/burn_test.sh',
+            'log_filename': 'stage5_gpu_burn.txt',
+            'script_args': ["--stage-one", "1", "--stage-two", "1"],  # Shorter duration for parallel test
+            'script_type': 'python'
+        },
+        {
+            'name': 'NVME Test',
+            'script_path': 'src/nvme_test.sh',
+            'log_filename': 'stage5_nvme_test.txt',
+            'script_type': 'bash'
+        },
+        {
+            'name': 'Hotspot Test',
+            'script_path': 'src/hotspot_test.sh',
+            'log_filename': 'stage5_hotspot_test.txt',
+            'script_type': 'bash'
+        }
+    ]
+    
+    print("⚠️  Note: This test will run for approximately 2+ hours due to GPU burn test duration")
+    results = run_parallel_tests(parallel_configs)
+    
+    # Check if all parallel tests passed
+    failed_tests = [name for name, success in results.items() if not success]
+    if failed_tests:
+        print(f"❌ Stage 5 failed - Failed tests: {', '.join(failed_tests)}")
+        sys.exit(1)
+    else:
+        print("✅ Stage 5 completed - All parallel tests passed!")
     
     print("\n=== QA Test Suite Completed ===")
 

@@ -1,170 +1,163 @@
 #!/usr/bin/env bash
-# health_check.sh — Complete system health check script
-# Includes: LED test, WiFi hotspot test, NVME health check, and GPU/CPU burn test
-
-# Check if we're already in a screen session
-if [ -z "$STY" ]; then
-  # We're not in a screen session, so start one
-  if [ "$EUID" -ne 0 ]; then
-    # We're not root, so use sudo with screen
-    exec sudo screen -S stage2 "$0" "$@"
-  else
-    # We're root, just start screen
-    exec screen -S stage2 "$0" "$@"
-  fi
-  exit 0
-fi
-
+# Hotspot test: cycle between hotspot mode and secondary wifi connection
 set -euo pipefail
 
-# Create logs directory in /home/truffle/qa/scripts/logs
-mkdir -p "/home/truffle/qa/scripts/logs"
+# Logging function
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+}
+
+log "Starting hotspot test"
 
 # CONFIGURATION
-
-#!/usr/bin/env bash
-# Run on the Orin (host name truffle-7042)
-set -euo pipefail
-
-# Set the Linux PC hostname
-PC_USER="truffle"
-# List of potential Linux PC hostnames (primary followed by fallback)
-PC_HOSTS=("abd.local" "truffle-2.local")
-# Will hold the first reachable host
-PC_HOST=""
-REMOTE_SCRIPT="/home/truffle/abd_work/hotspot_connect.sh"
-TMP_REMOTE="/home/truffle/abd_work/tmp.txt"
-SSH_KEY="$HOME/.ssh/id_hotspot"
-
-# Get Orin's hostname for SSID and connection name
-HOST_SSID=$(hostname)  # gives "truffle-7042"
-CONN_NAME="${HOST_SSID}-hotspot"  #dont  Use same name for NetworkManager connection, fucks up stuff
+HOST_SSID=$(hostname)  # gives "truffle-xxxx"
+CONN_NAME="${HOST_SSID}-hotspot"
 HOTSPOT_PSK="runescape"
-DURATION=30  # seconds to keep hotspot active
+HOTSPOT_DURATION=300  # 5 minutes for hotspot
+WIFI_DURATION=1800    # 30 minutes for wifi connection
 
-# 1) Notify the Linux PC about the hotspot SSID
-# Try each candidate hostname until one responds
-for host in "${PC_HOSTS[@]}"; do
-    if ping -c 1 -W 2 "$host" &> /dev/null; then
-        PC_HOST="$host"
-        echo "→ Successfully reached Linux PC at $PC_HOST"
-        break
-    fi
-done
+# Secondary wifi from stage0.sh
+SECONDARY_SSID="TP_LINK_AP_E732"
+SECONDARY_PSK="95008158"
 
-if [[ -n "$PC_HOST" ]]; then
-    # Attempt to SSH and set up the Linux PC
-    ssh -i "$SSH_KEY" -o ConnectTimeout=5 ${PC_USER}@${PC_HOST} "mkdir -p /home/truffle/abd_work && echo $HOST_SSID > $TMP_REMOTE"
-
-    # Start the hotspot-connect routine on the PC in background with nohup so it persists
-    ssh -i "$SSH_KEY" ${PC_USER}@${PC_HOST} "nohup sudo $REMOTE_SCRIPT > /home/truffle/abd_work/hotspot_nohup.out 2>&1 &"
-
-    # Give the Linux PC script a moment to start
-    echo "→ Waiting 5 seconds for Linux PC script to initialize..."
-    sleep 5
-else
-    echo "⚠️ Cannot reach Linux PC (${PC_HOSTS[*]}). Will still create hotspot but PC connection may fail."
-fi
-
-# 2) Identify the Wi-Fi interface
+# Find Wi-Fi interface
 IFACE=$(sudo nmcli -t -f DEVICE,TYPE device status | awk -F: '$2=="wifi"{print $1; exit}')
 if [[ -z "$IFACE" ]]; then
-    echo "❌ No Wi-Fi interface found."
+    log "❌ No Wi-Fi interface found"
     exit 1
 fi
-echo "→ Using Wi-Fi interface: $IFACE"
+log "Using Wi-Fi interface: $IFACE"
 
-# 3) Save existing connection (if any) so we can restore it later
-CURRENT_CONN=$(sudo nmcli -t -f NAME,DEVICE connection show --active | awk -F: -v dev="$IFACE" '$2==dev{print $1}')
-if [[ -n "$CURRENT_CONN" ]]; then
-    echo "→ Storing currently active connection: $CURRENT_CONN"
-    sudo nmcli connection down "$CURRENT_CONN"
-else
-    echo "→ No active WiFi connection found to store"
-fi
-
-# 4) Check if there's already a connection with our name and delete it first
-if sudo nmcli connection show | grep -q "$CONN_NAME"; then
-    echo "→ Found existing connection named '$CONN_NAME', deleting it first..."
-    sudo nmcli connection delete "$CONN_NAME" || true
-fi
-
-# 5) Start hotspot on the Orin with explicit connection name
-echo "→ Starting hotspot \"$HOST_SSID\" on $IFACE with connection name \"$CONN_NAME\"..."
-sudo nmcli device wifi hotspot ifname "$IFACE" ssid "$HOST_SSID" password "$HOTSPOT_PSK" con-name "$CONN_NAME"
-
-# 6) Show hotspot status
-echo "→ Hotspot active. Details:"
-sudo nmcli -f NAME,UUID,TYPE,DEVICE connection show --active | grep -i "$CONN_NAME" || true
-sudo nmcli device status | grep "$IFACE"
-echo "→ Hotspot will run for $DURATION seconds..."
-
-# Helper: check if at least one client is associated to the hotspot
+# Helper: check if clients are connected to hotspot
 client_connected() {
-    # 1) Try using iw (works when driver supports station dump)
+    # Try using iw to check for stations
     if sudo iw dev "$IFACE" station dump 2>/dev/null | grep -q 'Station'; then
         return 0
     fi
-
-    # 2) Fallback to hostapd_cli (more reliable on some Broadcom/Realtek chipsets)
+    
+    # Fallback to hostapd_cli
     if command -v hostapd_cli &>/dev/null; then
         if sudo hostapd_cli -i "$IFACE" all_sta 2>/dev/null | grep -qE '^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}'; then
             return 0
         fi
     fi
-
-    # 3) Last-chance: look for reachable peers in the ARP/neighbor table on the hotspot interface
+    
+    # Check ARP table
     if ip neigh show dev "$IFACE" | grep -q 'REACHABLE'; then
         return 0
     fi
-
+    
     return 1
 }
 
-# 7) Check for connected clients periodically
-for i in $(seq 1 $((DURATION/10))); do
-    echo "→ Checking for connected clients (check $i)..."
-    if client_connected; then
-        echo "✅ Client connected to hotspot '$HOST_SSID'!"
-    else
-        echo "Waiting for client connection to '$HOST_SSID'..."
+# Helper: get signal strength of current wifi connection
+get_signal_strength() {
+    local ssid="$1"
+    sudo nmcli device wifi list ifname "$IFACE" | grep "$ssid" | awk '{print $6}' | head -1
+}
+
+# Step 1: Save and tear down current connection
+log "Step 1: Tearing down current network connection"
+CURRENT_CONN=$(sudo nmcli -t -f NAME,DEVICE connection show --active | awk -F: -v dev="$IFACE" '$2==dev{print $1}')
+if [[ -n "$CURRENT_CONN" ]]; then
+    log "Disconnecting from: $CURRENT_CONN"
+    sudo nmcli connection down "$CURRENT_CONN"
+else
+    log "No active WiFi connection found"
+fi
+
+# Clean up any existing hotspot connection
+if sudo nmcli connection show | grep -q "$CONN_NAME"; then
+    log "Removing existing hotspot connection: $CONN_NAME"
+    sudo nmcli connection delete "$CONN_NAME" || true
+fi
+
+# Step 2: Start hotspot and monitor for specified duration
+log "Step 2: Starting hotspot '$HOST_SSID' for $((HOTSPOT_DURATION/60)) minutes"
+sudo nmcli device wifi hotspot ifname "$IFACE" ssid "$HOST_SSID" password "$HOTSPOT_PSK" con-name "$CONN_NAME"
+
+log "Hotspot active - monitoring for connections"
+sudo nmcli -f NAME,UUID,TYPE,DEVICE connection show --active | grep -i "$CONN_NAME" || true
+
+# Monitor hotspot for specified duration
+start_time=$(date +%s)
+connected_clients=0
+while true; do
+    current_time=$(date +%s)
+    elapsed=$((current_time - start_time))
+    
+    if [ $elapsed -ge $HOTSPOT_DURATION ]; then
+        break
     fi
-    sleep 10
+    
+    if client_connected; then
+        connected_clients=$((connected_clients + 1))
+        log "✅ Client connected to hotspot '$HOST_SSID' (total connections: $connected_clients)"
+    else
+        log "Monitoring hotspot '$HOST_SSID' - no clients connected (${elapsed}s/${HOTSPOT_DURATION}s)"
+    fi
+    
+    sleep 30
 done
 
-# 8) Tear down hotspot
-echo "→ Stopping hotspot \"$CONN_NAME\"..."
+log "Hotspot phase completed - connected clients during test: $connected_clients"
+
+# Step 3: Tear down hotspot
+log "Step 3: Tearing down hotspot"
 sudo nmcli connection down "$CONN_NAME" || true
 sudo nmcli connection delete "$CONN_NAME" || true
 
-# 9) Restore previous Wi-Fi connection (if any)
-if [[ -n "$CURRENT_CONN" ]]; then
-    echo "→ Restoring connection: $CURRENT_CONN"
-    sudo nmcli connection up "$CURRENT_CONN"
+# Step 4: Connect to secondary WiFi network
+log "Step 4: Connecting to secondary WiFi: $SECONDARY_SSID"
+if sudo nmcli device wifi connect "$SECONDARY_SSID" password "$SECONDARY_PSK" ifname "$IFACE"; then
+    log "✅ Connected to $SECONDARY_SSID"
     
-    # Wait for connection to be established
-    echo "→ Waiting for WiFi reconnection..."
-    for i in $(seq 1 10); do
-        if sudo nmcli -t -f NAME,DEVICE connection show --active | grep -q "$CURRENT_CONN"; then
-            echo "✅ Successfully reconnected to $CURRENT_CONN"
+    # Monitor connection for specified duration
+    log "Monitoring WiFi connection for $((WIFI_DURATION/60)) minutes"
+    start_time=$(date +%s)
+    connection_checks=0
+    successful_checks=0
+    
+    while true; do
+        current_time=$(date +%s)
+        elapsed=$((current_time - start_time))
+        
+        if [ $elapsed -ge $WIFI_DURATION ]; then
             break
         fi
-        echo "   Waiting... ($i/10)"
-        sleep 2
+        
+        connection_checks=$((connection_checks + 1))
+        
+        # Check if still connected
+        if sudo nmcli -t -f NAME,DEVICE connection show --active | grep -q "$SECONDARY_SSID"; then
+            successful_checks=$((successful_checks + 1))
+            signal_strength=$(get_signal_strength "$SECONDARY_SSID")
+            log "✅ Connected to $SECONDARY_SSID - Signal: ${signal_strength:-N/A} (${elapsed}s/${WIFI_DURATION}s)"
+        else
+            log "❌ Lost connection to $SECONDARY_SSID - attempting reconnect"
+            sudo nmcli device wifi connect "$SECONDARY_SSID" password "$SECONDARY_PSK" ifname "$IFACE" || true
+        fi
+        
+        sleep 60  # Check every minute
     done
+    
+    connection_stability=$((successful_checks * 100 / connection_checks))
+    log "WiFi monitoring completed - Connection stability: ${connection_stability}% (${successful_checks}/${connection_checks})"
+    
 else
-    echo "→ No previous connection to restore"
+    log "❌ Failed to connect to secondary WiFi: $SECONDARY_SSID"
 fi
 
-# 10) Try to reconnect to the Linux PC to check results
-if [[ -n "$PC_HOST" ]] && ping -c 1 -W 2 "$PC_HOST" &> /dev/null; then
-    echo "→ Reconnected to Linux PC, sanity check..."
+# Step 5: Restore original connection if possible
+if [[ -n "$CURRENT_CONN" ]]; then
+    log "Step 5: Attempting to restore original connection: $CURRENT_CONN"
+    if sudo nmcli connection up "$CURRENT_CONN"; then
+        log "✅ Restored connection to $CURRENT_CONN"
+    else
+        log "❌ Failed to restore original connection"
+    fi
 else
-    echo "⚠️ Could not reconnect to Linux PC to check results."
+    log "Step 5: No original connection to restore"
 fi
 
-echo "✅ Hotspot test complete."
-
-
-
-
+log "✅ Hotspot test completed successfully"
