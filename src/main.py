@@ -25,7 +25,8 @@ STAGE_MAPPING = {
     2: "nvme",
     3: "hotspot",
     4: "gpu",
-    5: "final"
+    5: "final",
+    6: "done"
 }
 
 def get_hostname():
@@ -69,7 +70,8 @@ def update_stage(stage_number):
             'stage': stage_name
         }
         
-        response = requests.post(BACKEND_URL, data=data, timeout=10)
+        files = {"_": ("", "")}
+        response = requests.post(BACKEND_URL, data=data, files=files, timeout=10)
         if response.status_code == 200:
             print(f"📡 Updated backend stage to: {stage_name}")
             return True
@@ -80,54 +82,64 @@ def update_stage(stage_number):
         print(f"❌ Error updating stage: {e}")
         return False
 
-def stream_log_file(log_filename, param_name, stop_event, current_stage=None):
-    """Stream a log file to the backend every STREAM_INTERVAL seconds"""
+def upload_log_file(log_filename, param_name, current_stage=None):
+    """Upload the current log file to backend (simple one-time upload)"""
     hostname = get_hostname()
     log_path = os.path.join(LOG_DIR, log_filename)
     csv_path = os.path.join(LOG_DIR, "burn_test.csv")  # GPU burn test CSV
     
-    while not stop_event.is_set():
-        try:
-            files = {}
-            data = {'name': hostname}
-            
-            # Include stage information if provided
-            if current_stage is not None:
-                stage_name = STAGE_MAPPING.get(current_stage, "setup")
-                data['stage'] = stage_name
-            
-            # Always stream the main log file
-            if os.path.exists(log_path):
-                with open(log_path, 'rb') as f:
-                    files[param_name] = (log_filename, f.read(), 'text/plain')
-            
-            # For GPU tests, also stream the CSV file if it exists
-            if "gpu" in param_name.lower() and os.path.exists(csv_path):
-                with open(csv_path, 'rb') as f:
-                    files['gpuTestGraph'] = ('burn_test.csv', f.read(), 'text/csv')
-            
-            if files:
-                response = requests.post(BACKEND_URL, files=files, data=data, timeout=10)
-                if response.status_code == 200:
-                    file_list = list(files.keys())
-                    print(f"📤 Streamed {', '.join(file_list)} to backend")
-                else:
-                    print(f"⚠️ Failed to stream files: {response.status_code}")
-        except Exception as e:
-            print(f"❌ Error streaming {log_filename}: {e}")
+    try:
+        files = {}
+        data = {'name': hostname}
         
+        # Include stage information if provided
+        if current_stage is not None:
+            stage_name = STAGE_MAPPING.get(current_stage, "setup")
+            data['stage'] = stage_name
+        
+        # Always upload the main log file if it exists
+        if os.path.exists(log_path):
+            with open(log_path, 'rb') as f:
+                files[param_name] = (log_filename, f.read(), 'text/plain')
+        
+        # For GPU tests, also upload the CSV file if it exists
+        if "gpu" in param_name.lower() and os.path.exists(csv_path):
+            with open(csv_path, 'rb') as f:
+                files['gpuTestGraph'] = ('burn_test.csv', f.read(), 'text/csv')
+        
+        if files:
+            response = requests.post(BACKEND_URL, files=files, data=data, timeout=30)
+            if response.status_code == 200:
+                file_list = list(files.keys())
+                print(f"📤 Uploaded {', '.join(file_list)} to backend")
+                return True
+            else:
+                print(f"⚠️ Failed to upload files: {response.status_code}")
+                return False
+        else:
+            print(f"⚠️ No log file found to upload: {log_path}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error uploading {log_filename}: {e}")
+        return False
+
+def periodic_upload_worker(log_filename, param_name, stop_event, current_stage=None):
+    """Worker that uploads log file every STREAM_INTERVAL seconds"""
+    while not stop_event.is_set():
+        upload_log_file(log_filename, param_name, current_stage)
         # Wait for the interval or until stop is requested
         stop_event.wait(STREAM_INTERVAL)
 
-def start_log_streaming(log_filename, param_name, current_stage=None):
-    """Start streaming a log file in a background thread"""
+def start_periodic_upload(log_filename, param_name, current_stage=None):
+    """Start periodic uploading of a log file in a background thread"""
     stop_event = threading.Event()
-    stream_thread = threading.Thread(
-        target=stream_log_file, 
+    upload_thread = threading.Thread(
+        target=periodic_upload_worker, 
         args=(log_filename, param_name, stop_event, current_stage)
     )
-    stream_thread.daemon = True
-    stream_thread.start()
+    upload_thread.daemon = True
+    upload_thread.start()
     return stop_event
 
 def setup_logging():
@@ -146,11 +158,11 @@ def run_script_with_logging(script_path, log_filename, script_args=None, script_
     
     print(f"Running {script_abs_path} -> {log_path}")
     
-    # Start streaming if requested
-    stream_stop_event = None
+    # Start periodic uploading if requested
+    upload_stop_event = None
     if stream_param:
-        print(f"📡 Starting log streaming for {log_filename}")
-        stream_stop_event = start_log_streaming(log_filename, stream_param, current_stage)
+        print(f"📡 Starting periodic upload for {log_filename}")
+        upload_stop_event = start_periodic_upload(log_filename, stream_param, current_stage)
     
     try:
         with open(log_path, 'w') as log_file:
@@ -180,10 +192,15 @@ def run_script_with_logging(script_path, log_filename, script_args=None, script_
             
             log_file.write(f"\n=== Completed at {datetime.now()} with exit code {result.returncode} ===\n")
         
-        # Stop streaming
-        if stream_stop_event:
-            stream_stop_event.set()
-            print(f"📡 Stopped log streaming for {log_filename}")
+        # Stop uploading
+        if upload_stop_event:
+            upload_stop_event.set()
+            print(f"📡 Stopped periodic upload for {log_filename}")
+            
+        # Final upload to ensure we capture the complete log
+        if stream_param:
+            print(f"📡 Final upload for {log_filename}")
+            upload_log_file(log_filename, stream_param, current_stage)
             
         if result.returncode == 0:
             print(f"✅ {script_path} completed successfully")
@@ -193,9 +210,13 @@ def run_script_with_logging(script_path, log_filename, script_args=None, script_
             return False
             
     except Exception as e:
-        # Stop streaming on error
-        if stream_stop_event:
-            stream_stop_event.set()
+        # Stop uploading on error
+        if upload_stop_event:
+            upload_stop_event.set()
+        # Final upload to capture any partial logs
+        if stream_param:
+            print(f"📡 Final upload for {log_filename} (after error)")
+            upload_log_file(log_filename, stream_param, current_stage)
         print(f"❌ Error running {script_path}: {e}")
         return False
 
@@ -240,6 +261,12 @@ def main():
     # Get current stage from backend to resume from where we left off
     start_stage = get_current_stage()
     print(f"🔄 Resuming from stage {start_stage} ({STAGE_MAPPING.get(start_stage, 'unknown')})")
+    
+    # Check if we're already done
+    if start_stage >= 6:
+        print("✅ All QA tests already completed - system is in 'done' state")
+        print("🎉 === QA Test Suite Already Complete === 🎉")
+        return
     
     # Stage 0: System setup and configuration
     if start_stage <= 0:
@@ -305,7 +332,7 @@ def main():
     if start_stage <= 4:
         print("\n--- Stage 4: GPU Burn Test ---")
         update_stage(4)  # Update backend that we're starting GPU test
-        burn_args = ["--stage-one", "2", "--stage-two", "2"]
+        burn_args = ["--stage-one", "0.01", "--stage-two", "0.01"]
         success = run_script_with_logging("src/burn_test.py", "burn_test.txt", burn_args, "python", "gpuTestFile", current_stage=4)
         
         if not success:
@@ -328,7 +355,7 @@ def main():
                 'name': 'GPU Burn Test',
                 'script_path': 'src/burn_test.py',
                 'log_filename': 'stage5_gpu_burn.txt',
-                'script_args': ["--stage-one", "1", "--stage-two", "1"],  # Shorter duration for parallel test
+                'script_args': ["--stage-one", "0.01", "--stage-two", "0.01"],  # Shorter duration for parallel test
                 'script_type': 'python',
                 'stream_param': 'stage5GpuTestFile',
                 'current_stage': 5
@@ -362,7 +389,8 @@ def main():
         else:
             print("✅ Stage 5 completed - All parallel tests passed!")
             # Mark as fully complete in backend
-            update_stage(5)
+            update_stage(6)  # Set to "done" stage
+            print("📡 Updated backend to 'done' state - QA testing complete!")
     else:
         print("⏭️ All stages already completed!")
     

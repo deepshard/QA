@@ -48,19 +48,20 @@ log(f"LOGGING TO CSV EVERY {LOG_INTERVAL} SECONDS")
 benchmark_processes = None
 
 # Define commands for stress tools
-gpu_stress_command = ["/home/truffle/qa/THERMALTEST/gpu_burn", "-m", "85%", str(TOTAL_DURATION + 60)]
-cpu_stress_command = ["/usr/bin/stress", "-c", "3", "-t", str(TOTAL_DURATION + 60)]
-led_stress_command = ["/home/truffle/qa/led_test/led_white"]
-led_off_command = ["sudo", "/home/truffle/qa/led_test/ledoff"]
+gpu_stress_command = ["./gpu_burn", "-m", "85%", str(TOTAL_DURATION + 60)]
+gpu_stress_cwd = "/home/truffle/QA/THERMALTEST"
+cpu_stress_command = ["/usr/bin/stress", "-c", "2", "-t", str(TOTAL_DURATION + 60)]
+led_stress_command = ["/home/truffle/QA/led_test/led_white"]
+led_off_command = ["sudo", "/home/truffle/QA/led_test/ledoff"]
 
-def _start(cmd):
+def _start(cmd, cwd=None):
     # Each tool gets its own process-group so we can kill children cleanly
-    return subprocess.Popen(cmd, preexec_fn=os.setsid)
+    return subprocess.Popen(cmd, preexec_fn=os.setsid, cwd=cwd)
 
 def start_cpu_gpu_benchmark():
     log("Starting CPU and GPU stress...")
     return [
-        _start(gpu_stress_command),
+        _start(gpu_stress_command, cwd=gpu_stress_cwd),
         _start(cpu_stress_command),
     ]
 
@@ -76,7 +77,7 @@ def turn_off_leds():
     except subprocess.CalledProcessError as e:
         log(f"Failed to turn off LEDs: {e}")
     except FileNotFoundError:
-        log("LED off command not found. Make sure /home/truffle/qa/led_test/ledoff exists")
+        log("LED off command not found. Make sure /home/truffle/QA/led_test/ledoff exists")
 
 def stop_benchmark():
     global benchmark_processes

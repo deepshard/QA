@@ -9,8 +9,8 @@ Type=simple
 Restart=always
 RestartSec=10
 User=root
-WorkingDirectory=/home/truffle/qa
-ExecStart=/usr/bin/python3 /home/truffle/qa/src/main.py
+WorkingDirectory=/home/truffle/QA
+ExecStart=/usr/bin/python3 /home/truffle/QA/src/main.py
 StandardOutput=journal
 StandardError=journal
 Environment=PYTHONUNBUFFERED=1

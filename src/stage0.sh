@@ -44,7 +44,7 @@ log "Step 2: Connectivity setup"
 WIFI_IF=wlP1p1s0
 PRIMARY_SSID="itsalltruffles"          
 PRIMARY_PSK="itsalwaysbeentruffles"
-SECONDARY_SSID="TP_LINK_AP_E732"
+SECONDARY_SSID="TP-LINK_AP_E732"
 SECONDARY_PSK="95008158"
 FALLBACK_NAME="fallback-hotspot"
 FALLBACK_PSK="runescape"
@@ -65,12 +65,12 @@ nmcli con add type wifi ifname "$WIFI_IF" mode ap \
 # 2b.  Try the client network and wait up to 15 s
 log "→ attempting to join $PRIMARY_SSID (15 s timeout)"
 if nmcli --wait 15 device wifi connect "$PRIMARY_SSID" \
-	         password "$PRIMARY_PSK" ifname "$WIFI_IF" autoconnect yes \
-		          connection.autoconnect-priority 0; then
+	         password "$PRIMARY_PSK" ifname "$WIFI_IF"; then
     log "✓ connected to $PRIMARY_SSID"
+    # Set autoconnect priority after successful connection
+    nmcli con modify "$PRIMARY_SSID" connection.autoconnect-priority 0
 else
-	    log "✗ client Wi-Fi failed – starting hotspot"
-	        nmcli con up "$FALLBACK_NAME"
+	    log "lol"
 fi
 
 
@@ -82,7 +82,7 @@ systemctl restart avahi-daemon
 
 #no need to make this too complicatred, ill make the repo temporarily public
 log "Step 4: Updating QA repository"
-QA_DIR=/home/truffle/qa
+QA_DIR=/home/truffle/QA
 run_as_truffle() { sudo -u truffle -H bash -c "$*"; }
 
 if [ -d "$QA_DIR/.git" ]; then

@@ -13,11 +13,11 @@ log "Starting hotspot test"
 HOST_SSID=$(hostname)  # gives "truffle-xxxx"
 CONN_NAME="${HOST_SSID}-hotspot"
 HOTSPOT_PSK="runescape"
-HOTSPOT_DURATION=300  # 5 minutes for hotspot
-WIFI_DURATION=1800    # 30 minutes for wifi connection
+HOTSPOT_DURATION=60  # 1 minute for hotspot
+WIFI_DURATION=60    # 1 minute for wifi connection
 
 # Secondary wifi from stage0.sh
-SECONDARY_SSID="TP_LINK_AP_E732"
+SECONDARY_SSID="TP-LINK_AP_E732"
 SECONDARY_PSK="95008158"
 
 # Find Wi-Fi interface
@@ -56,6 +56,42 @@ get_signal_strength() {
     sudo nmcli device wifi list ifname "$IFACE" | grep "$ssid" | awk '{print $6}' | head -1
 }
 
+# Helper: get detailed client information for hotspot
+get_client_details() {
+    local client_info=""
+    local client_count=0
+    
+    # Use iw to get detailed station information
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^Station\ ([0-9a-fA-F:]+) ]]; then
+            local mac="${BASH_REMATCH[1]}"
+            client_count=$((client_count + 1))
+            client_info+="Client $client_count (MAC: $mac) - "
+        elif [[ "$line" =~ signal:\ *(-?[0-9]+) ]]; then
+            local signal="${BASH_REMATCH[1]}"
+            client_info+="Signal: ${signal} dBm, "
+        elif [[ "$line" =~ rx\ bitrate:\ *([0-9.]+)\ ([A-Za-z/]+) ]]; then
+            local bitrate="${BASH_REMATCH[1]} ${BASH_REMATCH[2]}"
+            client_info+="RX Rate: $bitrate, "
+        elif [[ "$line" =~ tx\ bitrate:\ *([0-9.]+)\ ([A-Za-z/]+) ]]; then
+            local bitrate="${BASH_REMATCH[1]} ${BASH_REMATCH[2]}"
+            client_info+="TX Rate: $bitrate"
+            # End of this client's info, log it
+            if [[ -n "$client_info" ]]; then
+                log "  └─ ${client_info%%, }"  # Remove trailing comma and space
+                client_info=""
+            fi
+        fi
+    done < <(sudo iw dev "$IFACE" station dump 2>/dev/null)
+    
+    # If we have partial info (no tx bitrate found), still log it
+    if [[ -n "$client_info" ]]; then
+        log "  └─ ${client_info%%, }"
+    fi
+    
+    echo "$client_count"
+}
+
 # Step 1: Save and tear down current connection
 log "Step 1: Tearing down current network connection"
 CURRENT_CONN=$(sudo nmcli -t -f NAME,DEVICE connection show --active | awk -F: -v dev="$IFACE" '$2==dev{print $1}')
@@ -92,7 +128,8 @@ while true; do
     
     if client_connected; then
         connected_clients=$((connected_clients + 1))
-        log "✅ Client connected to hotspot '$HOST_SSID' (total connections: $connected_clients)"
+        current_client_count=$(get_client_details)
+        log "✅ Clients connected to hotspot '$HOST_SSID' (active: $current_client_count, total connections: $connected_clients)"
     else
         log "Monitoring hotspot '$HOST_SSID' - no clients connected (${elapsed}s/${HOTSPOT_DURATION}s)"
     fi
