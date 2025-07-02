@@ -1,33 +1,3 @@
-#!/usr/bin/env bash
-# GPU burn test script extracted from stage2.sh
-
-set -euo pipefail
-
-
-
-# Run GPU/CPU burn test
-log "Running GPU/CPU burn test, logging to $GPU_LOG_FILE"
-
-if sudo python3 "$GPU_BURN_SCRIPT" --stage-one 1 --stage-two 1 > >(tee -a "$GPU_LOG_FILE") 2> >(tee -a "$GPU_LOG_FILE" >&2); then
-  success "GPU/CPU burn test completed successfully" | tee -a "$GPU_LOG_FILE"
-  led_green
-  sleep 3
-else
-  GPU_EXIT_CODE=$?
-  fail "GPU/CPU burn test failed with exit code $GPU_EXIT_CODE" | tee -a "$GPU_LOG_FILE"
-  led_red
-  sleep 3
-fi
-
-led_off
-log "Test completed. CSV data available at: $GPU_CSV_PATH"
-
-##^ stuff tpo add in main.py
-
-
-
-#and then the actual gpu test
-
 #!/usr/bin/python3
 #
 # TWO-STAGE THERMAL TEST: 
@@ -44,6 +14,9 @@ from jtop import jtop
 import subprocess
 import sys
 import signal
+
+def log(message):
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}")
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='Two-stage thermal test with LED control')
@@ -67,10 +40,10 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Change to the script's directory to ensure all relative paths work
 os.chdir(SCRIPT_DIR)
 
-print(f"TWO-STAGE THERMAL TEST")
-print(f"STAGE 0: {args.stage_one:.1f} hours WITHOUT LEDs")
-print(f"STAGE 1: {args.stage_two:.1f} hours WITH LEDs")
-print(f"LOGGING TO CSV EVERY {LOG_INTERVAL} SECONDS")
+log(f"Starting TWO-STAGE THERMAL TEST")
+log(f"STAGE 0: {args.stage_one:.1f} hours WITHOUT LEDs")
+log(f"STAGE 1: {args.stage_two:.1f} hours WITH LEDs")
+log(f"LOGGING TO CSV EVERY {LOG_INTERVAL} SECONDS")
 
 benchmark_processes = None
 
@@ -85,57 +58,57 @@ def _start(cmd):
     return subprocess.Popen(cmd, preexec_fn=os.setsid)
 
 def start_cpu_gpu_benchmark():
-    print("Starting CPU and GPU stress...")
+    log("Starting CPU and GPU stress...")
     return [
         _start(gpu_stress_command),
         _start(cpu_stress_command),
     ]
 
 def start_led_benchmark():
-    print("Starting LED stress...")
+    log("Starting LED stress...")
     return _start(led_stress_command)
 
 def turn_off_leds():
-    print("Turning off LEDs...")
+    log("Turning off LEDs...")
     try:
         subprocess.run(led_off_command, check=True)
-        print("LEDs turned off successfully")
+        log("LEDs turned off successfully")
     except subprocess.CalledProcessError as e:
-        print(f"Failed to turn off LEDs: {e}")
+        log(f"Failed to turn off LEDs: {e}")
     except FileNotFoundError:
-        print("LED off command not found. Make sure /home/truffle/qa/led_test/ledoff exists")
+        log("LED off command not found. Make sure /home/truffle/qa/led_test/ledoff exists")
 
 def stop_benchmark():
     global benchmark_processes
     if benchmark_processes:
-        print("Killing benchmark tools...")
+        log("Killing benchmark tools...")
         for p in benchmark_processes:
             if p is not None:
                 try:
                     os.killpg(os.getpgid(p.pid), signal.SIGTERM)   # whole group
                 except ProcessLookupError:
                     pass
-        print("Waiting for benchmark tools to end...")
+        log("Waiting for benchmark tools to end...")
         for p in benchmark_processes:
             if p is not None:
                 p.wait()
-        print("All load generators stopped")
+        log("All load generators stopped")
 
 # Function to handle SIGINT (Ctrl+C)
 def signal_handler(sig, frame):
-    print("\nSIGINT received, cleaning up...")
+    log("SIGINT received, cleaning up...")
     stop_benchmark()  # Stop the benchmark process
     turn_off_leds()   # Make sure LEDs are off
     sys.exit(0)       # Exit the program
 
 signal.signal(signal.SIGINT, signal_handler)
 
-# Create a fixed filename for the CSV log (no timestamp)
-csv_filename = "/home/truffle/qa/scripts/logs/stage2_burn_log.csv"
-print(f"SAVING TO {csv_filename}")
+# Create a fixed filename for the CSV log in our unified log directory
+csv_filename = "/home/truffle/qa_logs/burn_test.csv"
+log(f"SAVING CSV TO {csv_filename}")
 
 # Create logs directory if it doesn't exist
-os.makedirs("/home/truffle/qa/scripts/logs", exist_ok=True)
+os.makedirs("/home/truffle/qa_logs", exist_ok=True)
 
 # Start the CPU and GPU benchmarks
 benchmark_processes = start_cpu_gpu_benchmark()
@@ -166,7 +139,7 @@ with open(csv_filename, mode='w', newline='') as csvfile:
             
             # Check if we need to switch to stage 1
             if current_stage == 0 and elapsed_time >= STAGE_ONE_DURATION:
-                print(f"\n--- SWITCHING TO STAGE 1: WITH LEDS ---")
+                log("--- SWITCHING TO STAGE 1: WITH LEDS ---")
                 current_stage = 1
                 led_process = start_led_benchmark()
                 if led_process:
@@ -219,13 +192,13 @@ with open(csv_filename, mode='w', newline='') as csvfile:
                 hours_elapsed = elapsed_time / 3600
                 hours_total = TOTAL_DURATION / 3600
                 stage_name = "WITHOUT LEDs" if current_stage == 0 else "WITH LEDs"
-                print(f"\nStatus: STAGE {current_stage} ({stage_name})")
-                print(f"Time elapsed: {hours_elapsed:.2f} hours / {hours_total:.2f} hours total")
-                print(f"Junction temp: {stats.get('Temp tj', 'N/A')}°C, Fan: {stats.get('Fan pwmfan0', 'N/A')}%")
+                log(f"Status: STAGE {current_stage} ({stage_name})")
+                log(f"Time elapsed: {hours_elapsed:.2f} hours / {hours_total:.2f} hours total")
+                log(f"Junction temp: {stats.get('Temp tj', 'N/A')}°C, Fan: {stats.get('Fan pwmfan0', 'N/A')}%")
 
-print("\nTest completed!")
-print(f"Saved CSV file to {csv_filename}")
-print("Stopping stress tools...")
+log("Test completed!")
+log(f"CSV file saved to {csv_filename}")
+log("Stopping stress tools...")
 
 # Stop all benchmarks
 stop_benchmark()
@@ -233,4 +206,4 @@ stop_benchmark()
 # Make sure LEDs are off at the end
 turn_off_leds()
 
-print("Test finished successfully.")
+log("✅ GPU burn test finished successfully")

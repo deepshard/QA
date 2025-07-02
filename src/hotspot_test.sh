@@ -21,288 +21,150 @@ set -euo pipefail
 mkdir -p "/home/truffle/qa/scripts/logs"
 
 # CONFIGURATION
-LED_WHITE="/home/truffle/qa/led_test/led_white"
-LED_RED="/home/truffle/qa/led_test/led_red"
-LED_GREEN="/home/truffle/qa/led_test/led_green"
-LED_BLUE="/home/truffle/qa/led_test/led_blue"
-LED_OFF="/home/truffle/qa/led_test/ledoff"
-LED_STATES="/home/truffle/qa/led_test/led_state_test"
-GPU_BURN_SCRIPT="/home/truffle/qa/THERMALTEST/test.py"
-NVME_HEALTH_SCRIPT="/home/truffle/qa/scripts/nvme_health_check.sh"
-HOTSPOT_SCRIPT="/home/truffle/qa/scripts/launch_hotspot.sh"
-HOTSPOT_DURATION=60 # seconds
 
-SCRIPTS_LOG_DIR="/home/truffle/qa_logs"
-LOGFILE="$SCRIPTS_LOG_DIR/healthcheck_$(date +%Y%m%d_%H%M%S).log"
+#!/usr/bin/env bash
+# Run on the Orin (host name truffle-7042)
+set -euo pipefail
 
+# Set the Linux PC hostname
+PC_USER="truffle"
+# List of potential Linux PC hostnames (primary followed by fallback)
+PC_HOSTS=("abd.local" "truffle-2.local")
+# Will hold the first reachable host
+PC_HOST=""
+REMOTE_SCRIPT="/home/truffle/abd_work/hotspot_connect.sh"
+TMP_REMOTE="/home/truffle/abd_work/tmp.txt"
+SSH_KEY="$HOME/.ssh/id_hotspot"
 
-# Log files for individual tests
-HOTSPOT_LOG_FILE="${SCRIPTS_LOG_DIR}/stage2_hotspot_logs.txt"
-NVME_LOG_FILE="${SCRIPTS_LOG_DIR}/stage2_nvme_log.txt"
-GPU_LOG_FILE="${SCRIPTS_LOG_DIR}/stage2_burn_log.txt"
+# Get Orin's hostname for SSID and connection name
+HOST_SSID=$(hostname)  # gives "truffle-7042"
+CONN_NAME="${HOST_SSID}-hotspot"  #dont  Use same name for NetworkManager connection, fucks up stuff
+HOTSPOT_PSK="runescape"
+DURATION=30  # seconds to keep hotspot active
 
-
-# UTILITIES
-# Terminal colors
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[0;33m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-NC='\033[0m' # No Color
-
-# Pretty logging function with dual output to terminal and log file
-log() {
-  local timestamp=$(date '+%F %T')
-  echo -e "${CYAN}[${timestamp}]${NC} $*" | tee -a "$LOGFILE"
-}
-
-success() {
-  echo -e "${GREEN}${BOLD}✓ $*${NC}" | tee -a "$LOGFILE"
-}
-
-fail() {
-  echo -e "${RED}${BOLD}✗ $*${NC}" | tee -a "$LOGFILE"
-}
-
-warning() {
-  echo -e "${YELLOW}${BOLD}! $*${NC}" | tee -a "$LOGFILE"
-}
-
-phase_start() {
-  echo -e "\n${CYAN}${BOLD}=== PHASE: $* ===${NC}" | tee -a "$LOGFILE"
-}
-
-phase_end() {
-  echo -e "${CYAN}${BOLD}=== DONE: $* ===${NC}\n" | tee -a "$LOGFILE"
-}
-
-
-# LED functions with proper kill and cleanup
-LED_PID=""
-led_stop() {
-  if [[ -n "$LED_PID" ]]; then
-    log "Stopping LED process (PID: $LED_PID)"
-    kill -9 $LED_PID >/dev/null 2>&1 || true
-    wait $LED_PID 2>/dev/null || true
-    LED_PID=""
-    
-    log "Running LED OFF command"
-    sudo "$LED_OFF" || true
-    sleep 1
-  fi
-}
-
-led_white() { 
-  led_stop
-  log "Starting LED White Program"
-  sudo "$LED_WHITE" & 
-  LED_PID=$!
-  sleep 5
-  led_stop
-}
-
-led_blue() {
-  led_stop
-  log "Leds are blue"
-  sudo "$LED_BLUE" &
-  LED_PID=$!
-  sleep 5
-  led_stop
-}
-
-led_red() { 
-  led_stop
-  log "Starting LED Red Program"
-  sudo "$LED_RED" & 
-  LED_PID=$!
-  sleep 5
-  led_stop
-}
-
-led_green() { 
-  led_stop
-  log "Starting LED Green Program"
-  sudo "$LED_GREEN" & 
-  LED_PID=$!
-  sleep 5
-  led_stop
-}
-
-led_states() {
-  led_stop
-  log "Leds are showing all orb states"
-  sudo "$LED_STATES" &
-  LED_PID=$!
-  sleep 10
-  led_stop
-}
-
-led_off() { 
-  led_stop
-}
-
-
-# Cleanup handler for script termination
-cleanup() {
-  warning "Cleaning up..."
-  led_off
-  
-  # Log file is already in the correct directory, no need to copy
-  log "Log saved to $LOGFILE"
-  exit 0
-}
-trap cleanup EXIT INT TERM
-
-
-
-
-
-###############################
-# PHASE 1: LED TEST
-###############################
-# phase_start "LED Test"
-# log "Testing all LED states"
-# led_states
-# led_off
-# success "LED test completed"
-# phase_end "LED Test"
-
-#commenting out since hotspot is now in firstboot sceipt so if it doesnt work well know before qa
-###############################
-# PHASE 2: HOTSPOT TEST
-###############################
-# phase_start "WiFi Hotspot Test"
-# # Indicator that hotspot test is starting
-# led_white
-# sleep 2
-# led_off
-
-# log "Starting WiFi hotspot test"
-
-# # Clear the hotspot log file
-# > "$HOTSPOT_LOG_FILE"
-
-# # Run hotspot script, capture ALL output to both main log and test-specific log file
-# log "Running hotspot test, logging to $HOTSPOT_LOG_FILE"
-# if "$HOTSPOT_SCRIPT" > >(tee -a "$HOTSPOT_LOG_FILE") 2> >(tee -a "$HOTSPOT_LOG_FILE" >&2); then
-#   success "Hotspot test completed successfully" | tee -a "$HOTSPOT_LOG_FILE"
-#   led_green
-#   sleep 3
-# else
-#   HOTSPOT_EXIT_CODE=$?
-#   fail "Hotspot test failed with exit code $HOTSPOT_EXIT_CODE" | tee -a "$HOTSPOT_LOG_FILE"
-#   led_red
-#   sleep 3
-# fi
-
-# # Transfer hotspot log to remote
-# log "Transferring hotspot log to remote"
-# scp_to_remote "$HOTSPOT_LOG_FILE" "${REMOTE_DIR}/$(basename "$HOTSPOT_LOG_FILE")"
-
-# led_off
-# phase_end "WiFi Hotspot Test"
-
-###############################
-# PHASE 3-4: CONCURRENT NVME HEALTH CHECK AND GPU/CPU BURN TEST
-###############################
-phase_start "Concurrent NVME Health Check and GPU/CPU Burn Test"
-# Indicator that tests are starting
-led_white
-sleep 2
-led_off
-
-log "Starting NVME health check and GPU/CPU burn test concurrently"
-
-# Clear the log files
-> "$NVME_LOG_FILE"
-> "$GPU_LOG_FILE"
-
-# CSV produced by test.py
-GPU_CSV_PATH="/home/truffle/qa/scripts/logs/stage2_burn_log.csv"
-# Always overwrite the same remote target so the latest data is easy to find
-GPU_CSV_REMOTE="${REMOTE_DIR}/stage2_burn_log.csv"
-
-# Start a background process to send CSV data every minute
-MAIN_PID=$$
-(
-  while kill -0 "$MAIN_PID" 2>/dev/null; do
-    if [ -f "$GPU_CSV_PATH" ]; then
-      scp_to_remote "$GPU_CSV_PATH" "$GPU_CSV_REMOTE"
-      log "Transferred GPU CSV at $(date)" >> "$GPU_LOG_FILE"
+# 1) Notify the Linux PC about the hotspot SSID
+# Try each candidate hostname until one responds
+for host in "${PC_HOSTS[@]}"; do
+    if ping -c 1 -W 2 "$host" &> /dev/null; then
+        PC_HOST="$host"
+        echo "→ Successfully reached Linux PC at $PC_HOST"
+        break
     fi
-    sleep 60
-  done
-) &
-CSV_TRANSFER_PID=$!
+done
 
-# Run NVME health check script in background
-log "Running NVME health check in background, logging to $NVME_LOG_FILE"
-(
-  if sudo "$NVME_HEALTH_SCRIPT" --extended > >(tee -a "$NVME_LOG_FILE") 2> >(tee -a "$NVME_LOG_FILE" >&2); then
-    success "NVME health check completed successfully" | tee -a "$NVME_LOG_FILE"
-  else
-    NVME_EXIT_CODE=$?
-    fail "NVME health check failed with exit code $NVME_EXIT_CODE" | tee -a "$NVME_LOG_FILE"
-  fi
-) &
-NVME_PID=$!
+if [[ -n "$PC_HOST" ]]; then
+    # Attempt to SSH and set up the Linux PC
+    ssh -i "$SSH_KEY" -o ConnectTimeout=5 ${PC_USER}@${PC_HOST} "mkdir -p /home/truffle/abd_work && echo $HOST_SSID > $TMP_REMOTE"
 
-# Run GPU/CPU burn test in background
-log "Running GPU/CPU burn test in background, logging to $GPU_LOG_FILE"
-(
-  if sudo python3 "$GPU_BURN_SCRIPT" --stage-one 1 --stage-two 1 > >(tee -a "$GPU_LOG_FILE") 2> >(tee -a "$GPU_LOG_FILE" >&2); then
-    success "GPU/CPU burn test completed successfully" | tee -a "$GPU_LOG_FILE"
-  else
-    GPU_EXIT_CODE=$?
-    fail "GPU/CPU burn test failed with exit code $GPU_EXIT_CODE" | tee -a "$GPU_LOG_FILE"
-  fi
-) &
-GPU_PID=$!
+    # Start the hotspot-connect routine on the PC in background with nohup so it persists
+    ssh -i "$SSH_KEY" ${PC_USER}@${PC_HOST} "nohup sudo $REMOTE_SCRIPT > /home/truffle/abd_work/hotspot_nohup.out 2>&1 &"
 
-# Wait for both tests to complete
-log "Waiting for concurrent tests to complete..."
-wait $NVME_PID
-NVME_STATUS=$?
-wait $GPU_PID
-GPU_STATUS=$?
-
-# Kill the CSV transfer background process if it's still running
-if kill -0 $CSV_TRANSFER_PID 2>/dev/null; then
-  kill $CSV_TRANSFER_PID
-  wait $CSV_TRANSFER_PID 2>/dev/null || true
-fi
-
-# Set LED based on test results
-if [ $NVME_STATUS -eq 0 ] && [ $GPU_STATUS -eq 0 ]; then
-  led_green
-  sleep 3
+    # Give the Linux PC script a moment to start
+    echo "→ Waiting 5 seconds for Linux PC script to initialize..."
+    sleep 5
 else
-  led_red
-  sleep 3
+    echo "⚠️ Cannot reach Linux PC (${PC_HOSTS[*]}). Will still create hotspot but PC connection may fail."
 fi
 
-# Transfer logs to remote
-log "Transferring logs to remote"
-scp_to_remote "$NVME_LOG_FILE" "${REMOTE_DIR}/$(basename "$NVME_LOG_FILE")"
-scp_to_remote "$GPU_LOG_FILE" "${REMOTE_DIR}/$(basename "$GPU_LOG_FILE")"
-if [ -f "$GPU_CSV_PATH" ]; then
-  # Final copy with .final suffix
-  scp_to_remote "$GPU_CSV_PATH" "${GPU_CSV_REMOTE}.final"
+# 2) Identify the Wi-Fi interface
+IFACE=$(sudo nmcli -t -f DEVICE,TYPE device status | awk -F: '$2=="wifi"{print $1; exit}')
+if [[ -z "$IFACE" ]]; then
+    echo "❌ No Wi-Fi interface found."
+    exit 1
 fi
-led_off
-phase_end "Concurrent NVME Health Check and GPU/CPU Burn Test"
+echo "→ Using Wi-Fi interface: $IFACE"
 
-########################################################
-#the end of phases 3-4, dont ji=udge i write these so i can comment them out without fru=ying my brain looking for stuff
-########################################################
+# 3) Save existing connection (if any) so we can restore it later
+CURRENT_CONN=$(sudo nmcli -t -f NAME,DEVICE connection show --active | awk -F: -v dev="$IFACE" '$2==dev{print $1}')
+if [[ -n "$CURRENT_CONN" ]]; then
+    echo "→ Storing currently active connection: $CURRENT_CONN"
+    sudo nmcli connection down "$CURRENT_CONN"
+else
+    echo "→ No active WiFi connection found to store"
+fi
+
+# 4) Check if there's already a connection with our name and delete it first
+if sudo nmcli connection show | grep -q "$CONN_NAME"; then
+    echo "→ Found existing connection named '$CONN_NAME', deleting it first..."
+    sudo nmcli connection delete "$CONN_NAME" || true
+fi
+
+# 5) Start hotspot on the Orin with explicit connection name
+echo "→ Starting hotspot \"$HOST_SSID\" on $IFACE with connection name \"$CONN_NAME\"..."
+sudo nmcli device wifi hotspot ifname "$IFACE" ssid "$HOST_SSID" password "$HOTSPOT_PSK" con-name "$CONN_NAME"
+
+# 6) Show hotspot status
+echo "→ Hotspot active. Details:"
+sudo nmcli -f NAME,UUID,TYPE,DEVICE connection show --active | grep -i "$CONN_NAME" || true
+sudo nmcli device status | grep "$IFACE"
+echo "→ Hotspot will run for $DURATION seconds..."
+
+# Helper: check if at least one client is associated to the hotspot
+client_connected() {
+    # 1) Try using iw (works when driver supports station dump)
+    if sudo iw dev "$IFACE" station dump 2>/dev/null | grep -q 'Station'; then
+        return 0
+    fi
+
+    # 2) Fallback to hostapd_cli (more reliable on some Broadcom/Realtek chipsets)
+    if command -v hostapd_cli &>/dev/null; then
+        if sudo hostapd_cli -i "$IFACE" all_sta 2>/dev/null | grep -qE '^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}'; then
+            return 0
+        fi
+    fi
+
+    # 3) Last-chance: look for reachable peers in the ARP/neighbor table on the hotspot interface
+    if ip neigh show dev "$IFACE" | grep -q 'REACHABLE'; then
+        return 0
+    fi
+
+    return 1
+}
+
+# 7) Check for connected clients periodically
+for i in $(seq 1 $((DURATION/10))); do
+    echo "→ Checking for connected clients (check $i)..."
+    if client_connected; then
+        echo "✅ Client connected to hotspot '$HOST_SSID'!"
+    else
+        echo "Waiting for client connection to '$HOST_SSID'..."
+    fi
+    sleep 10
+done
+
+# 8) Tear down hotspot
+echo "→ Stopping hotspot \"$CONN_NAME\"..."
+sudo nmcli connection down "$CONN_NAME" || true
+sudo nmcli connection delete "$CONN_NAME" || true
+
+# 9) Restore previous Wi-Fi connection (if any)
+if [[ -n "$CURRENT_CONN" ]]; then
+    echo "→ Restoring connection: $CURRENT_CONN"
+    sudo nmcli connection up "$CURRENT_CONN"
+    
+    # Wait for connection to be established
+    echo "→ Waiting for WiFi reconnection..."
+    for i in $(seq 1 10); do
+        if sudo nmcli -t -f NAME,DEVICE connection show --active | grep -q "$CURRENT_CONN"; then
+            echo "✅ Successfully reconnected to $CURRENT_CONN"
+            break
+        fi
+        echo "   Waiting... ($i/10)"
+        sleep 2
+    done
+else
+    echo "→ No previous connection to restore"
+fi
+
+# 10) Try to reconnect to the Linux PC to check results
+if [[ -n "$PC_HOST" ]] && ping -c 1 -W 2 "$PC_HOST" &> /dev/null; then
+    echo "→ Reconnected to Linux PC, sanity check..."
+else
+    echo "⚠️ Could not reconnect to Linux PC to check results."
+fi
+
+echo "✅ Hotspot test complete."
 
 
 
-# All tests complete
-log "All tests completed"
-success "Health check complete!"
-
-# Log file is already in the correct directory, no need to copy
-log "Log saved to $LOGFILE"
 

@@ -24,7 +24,7 @@ def setup_logging():
     os.makedirs(LOG_DIR, exist_ok=True)
     print(f"Log directory set up at: {LOG_DIR}")
 
-def run_script_with_logging(script_path, log_filename):
+def run_script_with_logging(script_path, log_filename, script_args=None, script_type="bash"):
     """Run a script and capture its output to a log file"""
     log_path = os.path.join(LOG_DIR, log_filename)
     script_abs_path = os.path.abspath(script_path)
@@ -43,8 +43,18 @@ def run_script_with_logging(script_path, log_filename):
             env = os.environ.copy()
             env['LOG_FILE'] = log_path
             
+            # Build command based on script type
+            if script_type == "python":
+                cmd = ['sudo', 'python3', script_abs_path]
+            else:
+                cmd = ['sudo', 'bash', script_abs_path]
+            
+            # Add arguments if provided
+            if script_args:
+                cmd.extend(script_args)
+            
             result = subprocess.run(
-                ['sudo', 'bash', script_abs_path],
+                cmd,
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
                 env=env,
@@ -91,6 +101,15 @@ def main():
     
     if not success:
         print("❌ NVME test failed, stopping test suite")
+        sys.exit(1)
+    
+    # Stage 3: GPU Burn Test
+    print("\n--- Stage 3: GPU Burn Test ---")
+    burn_args = ["--stage-one", "2", "--stage-two", "2"]
+    success = run_script_with_logging("src/burn_test.sh", "burn_test.txt", burn_args, "python")
+    
+    if not success:
+        print("❌ GPU burn test failed, stopping test suite")
         sys.exit(1)
     
     print("\n=== QA Test Suite Completed ===")
