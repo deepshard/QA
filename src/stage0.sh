@@ -1,3 +1,5 @@
+
+
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -29,6 +31,26 @@ REBOOT_NEEDED=false
 #    echo "First-boot already completed, exiting."
 #    exit 0
 #fi
+
+log "Step 0: Finalizing CUDA and package configuration"
+
+# 0a. Fix any half-installed packages
+log "Running dpkg --configure -a"
+dpkg --configure -a || log "⚠️ dpkg configure failed non-fatally"
+
+# 0b. Update APT sources and upgrade libc cleanly
+log "Running apt update"
+apt update || log "⚠️ apt update failed non-fatally"
+
+log "Running apt dist-upgrade -y"
+DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y || log "⚠️ dist-upgrade failed non-fatally"
+
+# 0c. CUDA toolkit post-validation (optional but useful)
+if command -v nvcc >/dev/null; then
+    log "CUDA is installed: $(nvcc --version | head -n 1)"
+else
+    log "❌ CUDA nvcc not found — installation may have failed"
+fi
 
 #set hostname truffle-xxxx
 log "Step 1: Setting hostname based on device serial"
@@ -225,3 +247,4 @@ fi
 
 log "Stage0 completed successfully"
 exit 0
+root@truff
