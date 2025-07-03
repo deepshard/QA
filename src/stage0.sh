@@ -104,18 +104,21 @@ log "Fixing git safe directory configuration"
 run_as_truffle "git config --global --add safe.directory $QA_DIR" || true
 
 if [ -d "$QA_DIR/.git" ]; then
-    log "QA repository exists, attempting to update"
+    log "QA repository exists, updating to latest main branch"
     # Ensure correct ownership
     chown -R truffle:truffle "$QA_DIR"
-    if run_as_truffle "cd $QA_DIR && git pull --quiet"; then
-        log "QA repository updated successfully"
+    
+    # Always use main as source of truth - fetch latest and reset hard
+    if run_as_truffle "cd $QA_DIR && git fetch origin main --quiet && git checkout main --quiet && git reset --hard origin/main --quiet"; then
+        log "QA repository updated successfully to latest main"
     else
         log "Failed to update QA repository, trying to fix and retry..."
         # Try to fix any remaining git issues
         run_as_truffle "cd $QA_DIR && git config --local --add safe.directory $QA_DIR" || true
-        run_as_truffle "cd $QA_DIR && git reset --hard HEAD" || true
-        if run_as_truffle "cd $QA_DIR && git pull --quiet"; then
-            log "QA repository updated successfully after fix"
+        run_as_truffle "cd $QA_DIR && git checkout main" || true
+        run_as_truffle "cd $QA_DIR && git fetch origin main --quiet" || true
+        if run_as_truffle "cd $QA_DIR && git reset --hard origin/main --quiet"; then
+            log "QA repository updated successfully to latest main after fix"
         else
             log "Failed to update QA repository even after fixes"
         fi
