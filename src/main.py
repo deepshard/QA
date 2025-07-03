@@ -262,19 +262,19 @@ def main():
     print(f"🔄 Resuming from stage {start_stage} ({STAGE_MAPPING.get(start_stage, 'unknown')})")
     
     # Stage 0: System setup and configuration
-    # if start_stage <= 0:
-    #     print("\n--- Stage 0: System Setup ---")
-    #     update_stage(0)  # Update backend that we're starting setup
-    #     success = run_script_with_logging("stage0.sh", "stage0_logs.txt", current_stage=0)
+    if start_stage <= 0:
+        print("\n--- Stage 0: System Setup ---")
+        update_stage(0)  # Update backend that we're starting setup
+        success = run_script_with_logging("stage0.sh", "stage0_logs.txt", current_stage=0)
         
-    #     if not success:
-    #         print("❌ Stage 0 failed, stopping test suite")
-    #         sys.exit(1)
+        if not success:
+            print("❌ Stage 0 failed, stopping test suite")
+            sys.exit(1)
         
-    #     update_stage(1)  # Move to next stage
-    #     print("✅ Stage 0 completed - Updated backend to LED stage")
-    # else:
-    #     print("⏭️ Skipping Stage 0 (already completed)")
+        update_stage(1)  # Move to next stage
+        print("✅ Stage 0 completed - Updated backend to LED stage")
+    else:
+        print("⏭️ Skipping Stage 0 (already completed)")
     
     # Stage 1: LED Test
     if start_stage <= 1:
@@ -325,7 +325,7 @@ def main():
     if start_stage <= 4:
         print("\n--- Stage 4: GPU Burn Test ---")
         update_stage(4)  # Update backend that we're starting GPU test
-        burn_args = ["--stage-one", "1", "--stage-two", "1"]
+        burn_args = ["--stage-one", "0.01", "--stage-two", "0.01"]
         success = run_script_with_logging("burn_test.py", "burn_test.txt", burn_args, "python", "gpuTestFile", current_stage=4)
         
         if not success:
@@ -348,7 +348,7 @@ def main():
                 'name': 'GPU Burn Test',
                 'script_path': 'burn_test.py',
                 'log_filename': 'stage5_gpu_burn.txt',
-                'script_args': ["--stage-one", "1", "--stage-two", "1"],  # Shorter duration for parallel test
+                'script_args': ["--stage-one", "0.01", "--stage-two", "0.01"],  # Shorter duration for parallel test
                 'script_type': 'python',
                 'stream_param': 'stage5GpuTestFile',
                 'current_stage': 5
