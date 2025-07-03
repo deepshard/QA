@@ -70,7 +70,9 @@ if nmcli --wait 15 device wifi connect "$PRIMARY_SSID" \
     # Set autoconnect priority after successful connection
     nmcli con modify "$PRIMARY_SSID" connection.autoconnect-priority 0
 else
-	    log "lol"
+    log "✗ client Wi-Fi failed – starting hotspot"
+    nmcli connection up "$FALLBACK_NAME"
+    log "✓ hotspot '$HOST' active for onboarding (password: $FALLBACK_PSK)"
 fi
 
 
