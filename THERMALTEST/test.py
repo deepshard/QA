@@ -45,7 +45,7 @@ print(f"LOGGING TO CSV EVERY {LOG_INTERVAL} SECONDS")
 benchmark_processes = None
 
 # Define commands for stress tools
-gpu_stress_command = ["/home/truffle/qa/THERMALTEST/gpu_burn", "-m", "85%", str(TOTAL_DURATION + 60)]
+gpu_stress_command = ["/home/truffle/QA/THERMALTEST/gpu_burn", "-m", "85%", str(TOTAL_DURATION + 60)]
 cpu_stress_command = ["/usr/bin/stress", "-c", "2", "-t", str(TOTAL_DURATION + 60)]
 led_stress_command = ["/home/truffle/QA/led_test/led_white"]
 led_off_command = ["sudo", "/home/truffle/QA/led_test/ledoff"]
@@ -73,7 +73,7 @@ def turn_off_leds():
     except subprocess.CalledProcessError as e:
         print(f"Failed to turn off LEDs: {e}")
     except FileNotFoundError:
-        print("LED off command not found. Make sure /home/truffle/qa/led_test/ledoff exists")
+        print("LED off command not found. Make sure /home/truffle/QA/led_test/ledoff exists")
 
 def stop_benchmark():
     global benchmark_processes
@@ -101,11 +101,11 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 # Create a fixed filename for the CSV log (no timestamp)
-csv_filename = "/home/truffle/qa/scripts/logs/stage2_burn_log.csv"
+csv_filename = "/home/truffle/QA/scripts/logs/stage2_burn_log.csv"
 print(f"SAVING TO {csv_filename}")
 
 # Create logs directory if it doesn't exist
-os.makedirs("/home/truffle/qa/scripts/logs", exist_ok=True)
+os.makedirs("/home/truffle/QA/scripts/logs", exist_ok=True)
 
 # Start the CPU and GPU benchmarks
 benchmark_processes = start_cpu_gpu_benchmark()
