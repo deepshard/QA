@@ -48,7 +48,7 @@ log(f"LOGGING TO CSV EVERY {LOG_INTERVAL} SECONDS")
 benchmark_processes = None
 
 # Define commands for stress tools
-gpu_stress_command = ["/home/truffle/QA/THERMALTEST/gpu_burn", "-m", "85%", str(TOTAL_DURATION + 60)]
+gpu_stress_command = ["/home/truffle/QA/THERMALTEST/gpu_burn", "-c", "/home/truffle/QA/THERMALTEST/compare.ptx", "-m", "85%", str(TOTAL_DURATION + 60)]
 cpu_stress_command = ["/usr/bin/stress", "-c", "2", "-t", str(TOTAL_DURATION + 60)]
 led_stress_command = ["/home/truffle/QA/led_test/led_white"]
 led_off_command = ["sudo", "/home/truffle/QA/led_test/ledoff"]

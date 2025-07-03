@@ -41,3 +41,26 @@ sudo systemctl status qa-test
 
 # View live logs
 sudo journalctl -u qa-test -f
+
+
+
+## fresh rootfs issue
+make sure rootfs has nvidia toolkit installed 
+cublas and cuda
+
+Install required CUDA components:
+```bash
+sudo apt update && sudo apt install -y libcublas-12-6
+sudo apt install -y cuda-toolkit-12-6
+```
+
+rn gpu burn executable is compiled with cuda 12.6
+if you're changing version it may be an issue so compile again with:
+```bash
+cd /THERMALTEST/gpu_burn
+CUDAPATH=/usr/local/cuda-12.6 make compare.ptx
+# Copy the new PTX file to parent directory
+cp compare.ptx ../
+```
+
+and then u should be good to go
