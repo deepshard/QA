@@ -62,16 +62,29 @@ nmcli con add type wifi ifname "$WIFI_IF" mode ap \
 					        connection.autoconnect-priority -999
 
 
-# 2b.  Try the client network and wait up to 15 s
-log "→ attempting to join $PRIMARY_SSID (15 s timeout)"
-if nmcli --wait 15 device wifi connect "$PRIMARY_SSID" \
-	         password "$PRIMARY_PSK" ifname "$WIFI_IF"; then
-    log "✓ connected to $PRIMARY_SSID"
-    # Set autoconnect priority after successful connection
-    nmcli con modify "$PRIMARY_SSID" connection.autoconnect-priority 0
-else
-	    log "✗ client Wi-Fi failed – starting hotspot"
-	        nmcli con up "$FALLBACK_NAME"
+# 2b.  Try the client network with retries
+CONNECTED=false
+for attempt in {1..5}; do
+    log "→ attempting to join $PRIMARY_SSID (attempt $attempt/5)"
+    if nmcli --wait 5 device wifi connect "$PRIMARY_SSID" \
+             password "$PRIMARY_PSK" ifname "$WIFI_IF"; then
+        log "✓ connected to $PRIMARY_SSID on attempt $attempt"
+        # Set autoconnect priority after successful connection
+        nmcli con modify "$PRIMARY_SSID" connection.autoconnect-priority 0
+        CONNECTED=true
+        break
+    else
+        log "✗ attempt $attempt failed"
+        if [ $attempt -lt 5 ]; then
+            log "→ waiting 5 seconds before retry..."
+            sleep 5
+        fi
+    fi
+done
+
+if [ "$CONNECTED" = false ]; then
+    log "✗ all Wi-Fi attempts failed – starting hotspot"
+    nmcli con up "$FALLBACK_NAME"
 fi
 
 
@@ -83,19 +96,37 @@ systemctl restart avahi-daemon
 
 #no need to make this too complicatred, ill make the repo temporarily public
 log "Step 4: Updating QA repository"
-QA_DIR=/home/truffle/qa
+QA_DIR=/home/truffle/QA
 run_as_truffle() { sudo -u truffle -H bash -c "$*"; }
+
+# Fix git ownership issues first
+log "Fixing git safe directory configuration"
+run_as_truffle "git config --global --add safe.directory $QA_DIR" || true
 
 if [ -d "$QA_DIR/.git" ]; then
     log "QA repository exists, attempting to update"
+    # Ensure correct ownership
+    chown -R truffle:truffle "$QA_DIR"
     if run_as_truffle "cd $QA_DIR && git pull --quiet"; then
         log "QA repository updated successfully"
     else
-        log "Failed to update QA repository"
+        log "Failed to update QA repository, trying to fix and retry..."
+        # Try to fix any remaining git issues
+        run_as_truffle "cd $QA_DIR && git config --local --add safe.directory $QA_DIR" || true
+        run_as_truffle "cd $QA_DIR && git reset --hard HEAD" || true
+        if run_as_truffle "cd $QA_DIR && git pull --quiet"; then
+            log "QA repository updated successfully after fix"
+        else
+            log "Failed to update QA repository even after fixes"
+        fi
     fi
 else
     log "QA repository not found, cloning from GitHub"
+    # Ensure parent directory exists and has correct ownership
+    mkdir -p "$(dirname "$QA_DIR")"
+    chown truffle:truffle "$(dirname "$QA_DIR")"
     run_as_truffle "git clone https://github.com/deepshard/QA.git $QA_DIR"
+    chown -R truffle:truffle "$QA_DIR"
     log "QA repository cloned successfully"
 fi
 
@@ -112,10 +143,38 @@ else
     log "Already in MAX-N, skipping"
 fi
 
+#rename emmc partition for jetson-io
+log "Step 6: Starting EMMC partition renaming phase"
+# Check current partition label
+CURRENT_LABEL=$(sgdisk -p /dev/mmcblk0 | grep "APP" | awk '{print $7}')
+if [ "$CURRENT_LABEL" != "APP_EMMC" ]; then
+  log "Changing partition label from APP to APP_EMMC..."
+  sgdisk --change-name=1:APP_EMMC /dev/mmcblk0
+  partprobe /dev/mmcblk0
+  
+  # Verify partition rename
+  NEW_LABEL=$(sgdisk -p /dev/mmcblk0 | grep "APP_EMMC" | awk '{print $7}')
+  if [ "$NEW_LABEL" = "APP_EMMC" ]; then
+    log "✅ Partition successfully renamed to APP_EMMC"
+  else
+    log "❌ Partition rename verification failed"
+  fi
+  
+  # Additional verification using lsblk
+  LSBLK_VERIFY=$(lsblk -o NAME,PARTLABEL /dev/mmcblk0 | grep "APP_EMMC")
+  if [ -n "$LSBLK_VERIFY" ]; then
+    verify "Partition label verified with lsblk"
+  else
+    log "❌ Partition label verification with lsblk failed"
+  fi
+else
+  log "Partition label is already APP_EMMC"
+fi
+
 ################################################################################
-# Step 6: Enable SPI1 pins
+# Step 7: Enable SPI1 pins
 ################################################################################
-log "Step 6: Configuring SPI1 pins"
+log "Step 7: Configuring SPI1 pins"
 if [[ -e /var/lib/spi-test.done ]]; then
     log "Marker file found – SPI‑1 should already be configured"
     if /opt/nvidia/jetson-io/config-by-function.py -l enabled | grep -q spi1; then
@@ -149,33 +208,7 @@ else
 fi
 
 
-#rename emmc partition for jetson-io
-log "Step 7: Starting EMMC partition renaming phase"
-# Check current partition label
-CURRENT_LABEL=$(sgdisk -p /dev/mmcblk0 | grep "APP" | awk '{print $7}')
-if [ "$CURRENT_LABEL" != "APP_EMMC" ]; then
-  log "Changing partition label from APP to APP_EMMC..."
-  sgdisk --change-name=1:APP_EMMC /dev/mmcblk0
-  partprobe /dev/mmcblk0
-  
-  # Verify partition rename
-  NEW_LABEL=$(sgdisk -p /dev/mmcblk0 | grep "APP_EMMC" | awk '{print $7}')
-  if [ "$NEW_LABEL" = "APP_EMMC" ]; then
-    log "✅ Partition successfully renamed to APP_EMMC"
-  else
-    log "❌ Partition rename verification failed"
-  fi
-  
-  # Additional verification using lsblk
-  LSBLK_VERIFY=$(lsblk -o NAME,PARTLABEL /dev/mmcblk0 | grep "APP_EMMC")
-  if [ -n "$LSBLK_VERIFY" ]; then
-    verify "Partition label verified with lsblk"
-  else
-    log "❌ Partition label verification with lsblk failed"
-  fi
-else
-  log "Partition label is already APP_EMMC"
-fi
+
 
 ################################################################################
 # Finalize
