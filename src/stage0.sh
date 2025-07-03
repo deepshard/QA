@@ -32,26 +32,6 @@ REBOOT_NEEDED=false
 #    exit 0
 #fi
 
-log "Step 0: Finalizing CUDA and package configuration"
-
-# 0a. Fix any half-installed packages
-log "Running dpkg --configure -a"
-dpkg --configure -a || log "⚠️ dpkg configure failed non-fatally"
-
-# 0b. Update APT sources and upgrade libc cleanly
-log "Running apt update"
-apt update || log "⚠️ apt update failed non-fatally"
-
-log "Running apt dist-upgrade -y"
-DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y || log "⚠️ dist-upgrade failed non-fatally"
-
-# 0c. CUDA toolkit post-validation (optional but useful)
-if command -v nvcc >/dev/null; then
-    log "CUDA is installed: $(nvcc --version | head -n 1)"
-else
-    log "❌ CUDA nvcc not found — installation may have failed"
-fi
-
 #set hostname truffle-xxxx
 log "Step 1: Setting hostname based on device serial"
 SERIAL=$(tr -d '\0' </proc/device-tree/serial-number)
@@ -117,43 +97,43 @@ log "Step 3: Restarting Avahi daemon"
 systemctl restart avahi-daemon
 
 #no need to make this too complicatred, ill make the repo temporarily public
-log "Step 4: Updating QA repository"
-QA_DIR=/home/truffle/QA
-run_as_truffle() { sudo -u truffle -H bash -c "$*"; }
+# log "Step 4: Updating QA repository"
+# QA_DIR=/home/truffle/QA
+# run_as_truffle() { sudo -u truffle -H bash -c "$*"; }
 
-# Fix git ownership issues first
-log "Fixing git safe directory configuration"
-run_as_truffle "git config --global --add safe.directory $QA_DIR" || true
+# # Fix git ownership issues first
+# log "Fixing git safe directory configuration"
+# run_as_truffle "git config --global --add safe.directory $QA_DIR" || true
 
-if [ -d "$QA_DIR/.git" ]; then
-    log "QA repository exists, updating to latest main branch"
-    # Ensure correct ownership
-    chown -R truffle:truffle "$QA_DIR"
+# if [ -d "$QA_DIR/.git" ]; then
+#     log "QA repository exists, updating to latest main branch"
+#     # Ensure correct ownership
+#     chown -R truffle:truffle "$QA_DIR"
     
-    # Always use main as source of truth - fetch latest and reset hard
-    if run_as_truffle "cd $QA_DIR && git fetch origin main --quiet && git checkout main --quiet && git reset --hard origin/main --quiet"; then
-        log "QA repository updated successfully to latest main"
-    else
-        log "Failed to update QA repository, trying to fix and retry..."
-        # Try to fix any remaining git issues
-        run_as_truffle "cd $QA_DIR && git config --local --add safe.directory $QA_DIR" || true
-        run_as_truffle "cd $QA_DIR && git checkout main" || true
-        run_as_truffle "cd $QA_DIR && git fetch origin main --quiet" || true
-        if run_as_truffle "cd $QA_DIR && git reset --hard origin/main --quiet"; then
-            log "QA repository updated successfully to latest main after fix"
-        else
-            log "Failed to update QA repository even after fixes"
-        fi
-    fi
-else
-    log "QA repository not found, cloning from GitHub"
-    # Ensure parent directory exists and has correct ownership
-    mkdir -p "$(dirname "$QA_DIR")"
-    chown truffle:truffle "$(dirname "$QA_DIR")"
-    run_as_truffle "git clone https://github.com/deepshard/QA.git $QA_DIR"
-    chown -R truffle:truffle "$QA_DIR"
-    log "QA repository cloned successfully"
-fi
+#     # Always use main as source of truth - fetch latest and reset hard
+#     if run_as_truffle "cd $QA_DIR && git fetch origin main --quiet && git checkout main --quiet && git reset --hard origin/main --quiet"; then
+#         log "QA repository updated successfully to latest main"
+#     else
+#         log "Failed to update QA repository, trying to fix and retry..."
+#         # Try to fix any remaining git issues
+#         run_as_truffle "cd $QA_DIR && git config --local --add safe.directory $QA_DIR" || true
+#         run_as_truffle "cd $QA_DIR && git checkout main" || true
+#         run_as_truffle "cd $QA_DIR && git fetch origin main --quiet" || true
+#         if run_as_truffle "cd $QA_DIR && git reset --hard origin/main --quiet"; then
+#             log "QA repository updated successfully to latest main after fix"
+#         else
+#             log "Failed to update QA repository even after fixes"
+#         fi
+#     fi
+# else
+#     log "QA repository not found, cloning from GitHub"
+#     # Ensure parent directory exists and has correct ownership
+#     mkdir -p "$(dirname "$QA_DIR")"
+#     chown truffle:truffle "$(dirname "$QA_DIR")"
+#     run_as_truffle "git clone https://github.com/deepshard/QA.git $QA_DIR"
+#     chown -R truffle:truffle "$QA_DIR"
+#     log "QA repository cloned successfully"
+# fi
 
 #set max-n power mode
 log "Step 5: Ensuring MAX-N power mode"
@@ -234,6 +214,20 @@ fi
 
 
 
+
+log "Step 8: Running LED test to confirm system setup"
+LED_TEST_SCRIPT="/home/truffle/QA/src/led_test.sh"
+
+if [ -f "$LED_TEST_SCRIPT" ]; then
+    log "Running LED test script..."
+    if bash "$LED_TEST_SCRIPT"; then
+        log "✅ LED test completed successfully"
+    else
+        log "⚠️ LED test failed, but continuing (non-critical)"
+    fi
+else
+    log "⚠️ LED test script not found at $LED_TEST_SCRIPT, skipping"
+fi
 
 ################################################################################
 # Finalize

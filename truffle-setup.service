@@ -1,0 +1,15 @@
+[Unit]
+Description=Truffle System Setup Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/truffle/QA/src/stage0.sh
+StandardOutput=journal
+StandardError=journal
+RemainAfterExit=yes
+User=root
+
+[Install]
+WantedBy=multi-user.target 

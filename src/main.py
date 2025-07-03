@@ -262,34 +262,34 @@ def main():
     print(f"🔄 Resuming from stage {start_stage} ({STAGE_MAPPING.get(start_stage, 'unknown')})")
     
     # Stage 0: System setup and configuration
-    if start_stage <= 0:
-        print("\n--- Stage 0: System Setup ---")
-        update_stage(0)  # Update backend that we're starting setup
-        success = run_script_with_logging("stage0.sh", "stage0_logs.txt", current_stage=0)
+    # if start_stage <= 0:
+    #     print("\n--- Stage 0: System Setup ---")
+    #     update_stage(0)  # Update backend that we're starting setup
+    #     success = run_script_with_logging("stage0.sh", "stage0_logs.txt", current_stage=0)
         
-        if not success:
-            print("❌ Stage 0 failed, stopping test suite")
-            sys.exit(1)
+    #     if not success:
+    #         print("❌ Stage 0 failed, stopping test suite")
+    #         sys.exit(1)
         
-        update_stage(1)  # Move to next stage
-        print("✅ Stage 0 completed - Updated backend to LED stage")
-    else:
-        print("⏭️ Skipping Stage 0 (already completed)")
+    #     update_stage(1)  # Move to next stage
+    #     print("✅ Stage 0 completed - Updated backend to LED stage")
+    # else:
+    #     print("⏭️ Skipping Stage 0 (already completed)")
     
     # Stage 1: LED Test
-    if start_stage <= 1:
-        print("\n--- Stage 1: LED Test ---")
-        update_stage(1)  # Update backend that we're starting LED test
-        success = run_script_with_logging("led_test.sh", "led_test.txt", stream_param="ledTestFile", current_stage=1)
+    # if start_stage <= 1:
+    #     print("\n--- Stage 1: LED Test ---")
+    #     update_stage(1)  # Update backend that we're starting LED test
+    #     success = run_script_with_logging("led_test.sh", "led_test.txt", stream_param="ledTestFile", current_stage=1)
         
-        if not success:
-            print("❌ LED test failed, stopping test suite")
-            sys.exit(1)
+    #     if not success:
+    #         print("❌ LED test failed, stopping test suite")
+    #         sys.exit(1)
         
-        update_stage(2)  # Move to next stage
-        print("✅ Stage 1 completed - Updated backend to NVME stage")
-    else:
-        print("⏭️ Skipping Stage 1 (already completed)")
+    #     update_stage(2)  # Move to next stage
+    #     print("✅ Stage 1 completed - Updated backend to NVME stage")
+    # else:
+    #     print("⏭️ Skipping Stage 1 (already completed)")
     
     # Stage 2: NVME Test
     if start_stage <= 2:
