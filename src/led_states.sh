@@ -1,22 +1,15 @@
-LED_WHITE="/home/truffle/qa/led_test/led_white"
-LED_RED="/home/truffle/qa/led_test/led_red"
-LED_GREEN="/home/truffle/qa/led_test/led_green"
-LED_BLUE="/home/truffle/qa/led_test/led_blue"
-LED_OFF="/home/truffle/qa/led_test/ledoff"
-LED_STATES="/home/truffle/qa/led_test/led_state_test"
-GPU_BURN_SCRIPT="/home/truffle/qa/THERMALTEST/test.py"
-NVME_HEALTH_SCRIPT="/home/truffle/qa/scripts/nvme_health_check.sh"
-HOTSPOT_SCRIPT="/home/truffle/qa/scripts/launch_hotspot.sh"
-HOTSPOT_DURATION=60 # seconds
+LED_WHITE="/home/truffle/QA/led_test/led_white"
+LED_RED="/home/truffle/QA/led_test/led_red"
+LED_GREEN="/home/truffle/QA/led_test/led_green"
+LED_BLUE="/home/truffle/QA/led_test/led_blue"
+LED_OFF="/home/truffle/QA/led_test/ledoff"
+LED_STATES="/home/truffle/QA/led_test/led_state_test"
+
+
 
 SCRIPTS_LOG_DIR="/home/truffle/qa_logs"
-LOGFILE="$SCRIPTS_LOG_DIR/healthcheck_$(date +%Y%m%d_%H%M%S).log"
 
 
-# Log files for individual tests
-HOTSPOT_LOG_FILE="${SCRIPTS_LOG_DIR}/stage2_hotspot_logs.txt"
-NVME_LOG_FILE="${SCRIPTS_LOG_DIR}/stage2_nvme_log.txt"
-GPU_LOG_FILE="${SCRIPTS_LOG_DIR}/stage2_burn_log.txt"
 
 
 # UTILITIES

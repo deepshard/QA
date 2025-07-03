@@ -4,11 +4,11 @@
 set -euo pipefail
 
 # CONFIGURATION
-LED_WHITE="/home/truffle/qa/led_test/led_white"
-LED_RED="/home/truffle/qa/led_test/led_red"
-LED_GREEN="/home/truffle/qa/led_test/led_green"
-LED_BLUE="/home/truffle/qa/led_test/led_blue"
-LED_OFF="/home/truffle/qa/led_test/ledoff"
+LED_WHITE="/home/truffle/QA/led_test/led_white"
+LED_RED="/home/truffle/QA/led_test/led_red"
+LED_GREEN="/home/truffle/QA/led_test/led_green"
+LED_BLUE="/home/truffle/QA/led_test/led_blue"
+LED_OFF="/home/truffle/QA/led_test/ledoff"
 LED_PID=""
 DURATION=3
 
@@ -26,11 +26,20 @@ led_stop() {
     kill -9 $LED_PID >/dev/null 2>&1 || true
     wait $LED_PID 2>/dev/null || true
     LED_PID=""
-    
-    log "Running LED OFF command"
-    sudo "$LED_OFF" > /dev/null 2>&1 || true
-    sleep 1
   fi
+  
+  # Kill any remaining LED processes by name
+  log "Killing any remaining LED processes"
+  sudo pkill -f "led_white" >/dev/null 2>&1 || true
+  sudo pkill -f "led_red" >/dev/null 2>&1 || true
+  sudo pkill -f "led_green" >/dev/null 2>&1 || true
+  sudo pkill -f "led_blue" >/dev/null 2>&1 || true
+  sudo pkill -f "ledoff" >/dev/null 2>&1 || true
+  sudo pkill -f "led_state_test" >/dev/null 2>&1 || true
+  
+  log "Running LED OFF command"
+  sudo "$LED_OFF" > /dev/null 2>&1 || true
+  sleep 1
 }
 
 led_test() {
@@ -46,8 +55,48 @@ led_test() {
   log "$color LED test completed"
 }
 
+# Comprehensive cleanup function
+cleanup_all_leds() {
+  log "=== FINAL CLEANUP: Terminating all LED processes ==="
+  
+  # Kill the tracked PID first
+  if [[ -n "$LED_PID" ]]; then
+    log "Killing tracked LED process (PID: $LED_PID)"
+    kill -9 $LED_PID >/dev/null 2>&1 || true
+    wait $LED_PID 2>/dev/null || true
+    LED_PID=""
+  fi
+  
+  # Kill all LED processes by name (more aggressive)
+  log "Killing all LED processes by name..."
+  sudo pkill -9 -f "led_white" >/dev/null 2>&1 || true
+  sudo pkill -9 -f "led_red" >/dev/null 2>&1 || true
+  sudo pkill -9 -f "led_green" >/dev/null 2>&1 || true
+  sudo pkill -9 -f "led_blue" >/dev/null 2>&1 || true
+  sudo pkill -9 -f "ledoff" >/dev/null 2>&1 || true
+  sudo pkill -9 -f "led_state_test" >/dev/null 2>&1 || true
+  
+  # Give a moment for processes to terminate
+  sleep 2
+  
+  # Final LED OFF command
+  log "Final LED OFF command"
+  sudo "$LED_OFF" > /dev/null 2>&1 || true
+  sleep 1
+  
+  # Verify no LED processes remain
+  remaining_procs=$(pgrep -f "led_" 2>/dev/null | wc -l)
+  if [[ $remaining_procs -gt 0 ]]; then
+    log "Warning: $remaining_procs LED processes may still be running"
+    log "Remaining LED processes:"
+    pgrep -fl "led_" 2>/dev/null || true
+  else
+    log "✅ All LED processes successfully terminated"
+  fi
+}
+
 # Ensure LEDs are off when script exits
-trap led_stop EXIT
+trap cleanup_all_leds EXIT
 
 log "Starting LED color tests"
 

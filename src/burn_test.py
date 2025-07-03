@@ -50,8 +50,8 @@ benchmark_processes = None
 # Define commands for stress tools
 gpu_stress_command = ["/home/truffle/qa/THERMALTEST/gpu_burn", "-m", "85%", str(TOTAL_DURATION + 60)]
 cpu_stress_command = ["/usr/bin/stress", "-c", "3", "-t", str(TOTAL_DURATION + 60)]
-led_stress_command = ["/home/truffle/qa/led_test/led_white"]
-led_off_command = ["sudo", "/home/truffle/qa/led_test/ledoff"]
+led_stress_command = ["/home/truffle/QA/led_test/led_white"]
+led_off_command = ["sudo", "/home/truffle/QA/led_test/ledoff"]
 
 def _start(cmd):
     # Each tool gets its own process-group so we can kill children cleanly
