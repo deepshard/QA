@@ -332,7 +332,7 @@ def main():
     if start_stage <= 4:
         print("\n--- Stage 4: GPU Burn Test ---")
         update_stage(4)  # Update backend that we're starting GPU test
-        burn_args = ["--stage-one", "0.01", "--stage-two", "0.01"]
+        burn_args = ["--stage-one", "1", "--stage-two", "1"]
         success = run_script_with_logging("src/burn_test.py", "burn_test.txt", burn_args, "python", "gpuTestFile", current_stage=4)
         
         if not success:
@@ -355,7 +355,7 @@ def main():
                 'name': 'GPU Burn Test',
                 'script_path': 'src/burn_test.py',
                 'log_filename': 'stage5_gpu_burn.txt',
-                'script_args': ["--stage-one", "0.01", "--stage-two", "0.01"],  # Shorter duration for parallel test
+                'script_args': ["--stage-one", "0.5", "--stage-two", "0.5"],  # Shorter duration for parallel test
                 'script_type': 'python',
                 'stream_param': 'stage5GpuTestFile',
                 'current_stage': 5
