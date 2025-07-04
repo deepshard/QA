@@ -135,21 +135,9 @@ systemctl restart avahi-daemon
 #     log "QA repository cloned successfully"
 # fi
 
-#set max-n power mode
-log "Step 5: Ensuring MAX-N power mode"
-if ! nvpmodel -q | grep -q 'NV Power Mode: MAXN'; then
-    if yes | nvpmodel -m 0; then
-        log "MAX-N activated (reboot may be required)"
-        REBOOT_NEEDED=true
-    else
-        log "nvpmodel failed non-fatally; continuing"
-    fi
-else
-    log "Already in MAX-N, skipping"
-fi
 
 #rename emmc partition for jetson-io
-log "Step 6: Starting EMMC partition renaming phase"
+log "Step 5: Starting EMMC partition renaming phase"
 # Check current partition label
 CURRENT_LABEL=$(sgdisk -p /dev/mmcblk0 | grep "APP" | awk '{print $7}')
 if [ "$CURRENT_LABEL" != "APP_EMMC" ]; then
@@ -177,9 +165,9 @@ else
 fi
 
 ################################################################################
-# Step 7: Enable SPI1 pins
+# Step 6: Enable SPI1 pins
 ################################################################################
-log "Step 7: Configuring SPI1 pins"
+log "Step 6: Configuring SPI1 pins"
 if [[ -e /var/lib/spi-test.done ]]; then
     log "Marker file found – SPI‑1 should already be configured"
     if /opt/nvidia/jetson-io/config-by-function.py -l enabled | grep -q spi1; then
@@ -212,22 +200,22 @@ else
     fi
 fi
 
-
-
-
-log "Step 8: Running LED test to confirm system setup"
-LED_TEST_SCRIPT="/home/truffle/QA/src/led_test.sh"
-
-if [ -f "$LED_TEST_SCRIPT" ]; then
-    log "Running LED test script..."
-    if bash "$LED_TEST_SCRIPT"; then
-        log "✅ LED test completed successfully"
+################################################################################
+# Step 8: Set MAX-N power mode (triggers reboot if needed)
+################################################################################
+log "Step 8: Ensuring MAX-N power mode"
+if ! nvpmodel -q | grep -q 'NV Power Mode: MAXN'; then
+    if yes | nvpmodel -m 0; then
+        log "MAX-N activated (reboot may be required)"
+        REBOOT_NEEDED=true
     else
-        log "⚠️ LED test failed, but continuing (non-critical)"
+        log "nvpmodel failed non-fatally; continuing"
     fi
 else
-    log "⚠️ LED test script not found at $LED_TEST_SCRIPT, skipping"
+    log "Already in MAX-N, skipping"
 fi
+
+
 
 ################################################################################
 # Finalize
