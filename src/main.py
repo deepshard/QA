@@ -321,7 +321,7 @@ def main():
     # else:
     #     print("⏭️ Skipping Stage 0 (already completed)")
     
-    Stage 1: LED Test
+    #Stage 1: LED Test
     if start_stage <= 1:
         print("\n--- Stage 1: LED Test ---")
         update_stage(1)  # Update backend that we're starting LED test
