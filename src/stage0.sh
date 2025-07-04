@@ -68,7 +68,7 @@ nmcli con add type wifi ifname "$WIFI_IF" mode ap \
 CONNECTED=false
 for attempt in {1..5}; do
     log "→ attempting to join $PRIMARY_SSID (attempt $attempt/5)"
-    if nmcli --wait 5 device wifi connect "$PRIMARY_SSID" \
+    if nmcli --wait 15 device wifi connect "$PRIMARY_SSID" \
              password "$PRIMARY_PSK" ifname "$WIFI_IF"; then
         log "✓ connected to $PRIMARY_SSID on attempt $attempt"
         # Set autoconnect priority after successful connection

@@ -13,8 +13,8 @@ log "Starting hotspot test"
 HOST_SSID=$(hostname)  # gives "truffle-xxxx"
 CONN_NAME="${HOST_SSID}-hotspot"
 HOTSPOT_PSK="runescape"
-HOTSPOT_DURATION=30  # 30 minutes for hotspot
-WIFI_DURATION=30    # 5 minutes for wifi connection
+HOTSPOT_DURATION=1800  # 30 minutes for hotspot
+WIFI_DURATION=300    # 5 minutes for wifi connection
 
 # Secondary wifi from stage0.sh
 SECONDARY_SSID="TP_LINK_AP_E732"
