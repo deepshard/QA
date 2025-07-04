@@ -252,6 +252,51 @@ def run_parallel_tests(test_configs):
     
     return results
 
+def reconnect_to_primary_wifi():
+    """Reconnect to primary WiFi network after hotspot test"""
+    PRIMARY_SSID = "itsalltruffles"
+    PRIMARY_PSK = "itsalwaysbeentruffles"
+    WIFI_IF = "wlP1p1s0"
+    
+    print(f"🔄 Attempting to reconnect to {PRIMARY_SSID}...")
+    
+    try:
+        # Try to connect to primary WiFi with retries
+        for attempt in range(1, 4):  # 3 attempts
+            print(f"→ Connection attempt {attempt}/3")
+            
+            # Use nmcli to connect
+            result = subprocess.run([
+                'nmcli', '--wait', '10', 'device', 'wifi', 'connect', 
+                PRIMARY_SSID, 'password', PRIMARY_PSK, 'ifname', WIFI_IF
+            ], capture_output=True, text=True, timeout=15)
+            
+            if result.returncode == 0:
+                print(f"✅ Successfully connected to {PRIMARY_SSID} on attempt {attempt}")
+                
+                # Set autoconnect priority after successful connection
+                subprocess.run([
+                    'nmcli', 'con', 'modify', PRIMARY_SSID, 
+                    'connection.autoconnect-priority', '0'
+                ], capture_output=True)
+                
+                return True
+            else:
+                print(f"❌ Attempt {attempt} failed: {result.stderr.strip()}")
+                if attempt < 3:
+                    print("→ Waiting 5 seconds before retry...")
+                    time.sleep(5)
+        
+        print(f"❌ Failed to reconnect to {PRIMARY_SSID} after 3 attempts")
+        return False
+        
+    except subprocess.TimeoutExpired:
+        print("❌ WiFi reconnection timed out")
+        return False
+    except Exception as e:
+        print(f"❌ Error during WiFi reconnection: {e}")
+        return False
+
 def main():
     print("=== QA Test Suite Starting ===")
     
@@ -315,6 +360,14 @@ def main():
         if not success:
             print("❌ Hotspot test failed, stopping test suite")
             sys.exit(1)
+        
+        # Reconnect to primary WiFi after hotspot test
+        print("🔄 Reconnecting to primary WiFi network after hotspot test...")
+        wifi_reconnect_success = reconnect_to_primary_wifi()
+        if wifi_reconnect_success:
+            print("✅ Successfully reconnected to primary WiFi")
+        else:
+            print("⚠️ Failed to reconnect to primary WiFi, but continuing")
         
         update_stage(4)  # Move to next stage
         print("✅ Stage 3 completed - Updated backend to GPU stage")
@@ -381,6 +434,15 @@ def main():
             sys.exit(1)
         else:
             print("✅ Stage 5 completed - All parallel tests passed!")
+            
+            # Reconnect to primary WiFi after final parallel test (includes hotspot)
+            print("🔄 Reconnecting to primary WiFi network after final parallel test...")
+            wifi_reconnect_success = reconnect_to_primary_wifi()
+            if wifi_reconnect_success:
+                print("✅ Successfully reconnected to primary WiFi after final test")
+            else:
+                print("⚠️ Failed to reconnect to primary WiFi, but continuing")
+            
             # Mark as fully complete in backend
             update_stage(5)
     else:
